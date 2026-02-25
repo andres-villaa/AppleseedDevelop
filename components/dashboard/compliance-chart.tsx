@@ -10,25 +10,55 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts"
+import { mockDonaciones } from "@/lib/data"
 
-const data = [
-  { mes: "Sep", cumplimiento: 88.2 },
-  { mes: "Oct", cumplimiento: 89.5 },
-  { mes: "Nov", cumplimiento: 91.3 },
-  { mes: "Dic", cumplimiento: 90.1 },
-  { mes: "Ene", cumplimiento: 93.4 },
-  { mes: "Feb", cumplimiento: 94.7 },
-]
+// Nombres cortos de mes en español
+const MONTH_LABELS = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
+
+// Agrupa donaciones por mes (últimos 6 meses desde la fecha más reciente)
+function buildMonthlyData() {
+  // Fecha de referencia: mes más reciente en los datos
+  const fechas = mockDonaciones.map(d => new Date(d.fecha))
+  const maxDate = new Date(Math.max(...fechas.map(f => f.getTime())))
+
+  // Generar los 6 meses hacia atrás
+  const months: { mes: string; monto: number; cantidad: number }[] = []
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(maxDate.getFullYear(), maxDate.getMonth() - i, 1)
+    const year = d.getFullYear()
+    const month = d.getMonth() // 0-indexed
+
+    const enMes = mockDonaciones.filter(don => {
+      const f = new Date(don.fecha)
+      return f.getFullYear() === year && f.getMonth() === month
+    })
+
+    months.push({
+      mes: MONTH_LABELS[month],
+      monto: enMes.reduce((s, don) => s + don.monto, 0),
+      cantidad: enMes.length,
+    })
+  }
+  return months
+}
+
+const data = buildMonthlyData()
+
+function formatMXN(value: number) {
+  if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`
+  if (value >= 1_000) return `$${(value / 1_000).toFixed(0)}k`
+  return `$${value}`
+}
 
 export function ComplianceChart() {
   return (
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-base font-semibold">
-          Tasa de Cumplimiento
+          Donaciones por Mes
         </CardTitle>
         <CardDescription>
-          Porcentaje de cumplimiento mensual
+          Monto total recaudado en los últimos 6 meses
         </CardDescription>
       </CardHeader>
       <CardContent className="pt-0">
@@ -51,7 +81,7 @@ export function ComplianceChart() {
                 tickLine={false}
                 axisLine={false}
                 fontSize={12}
-                domain={[85, 100]}
+                tickFormatter={formatMXN}
                 stroke="var(--color-muted-foreground)"
               />
               <Tooltip
@@ -62,11 +92,14 @@ export function ComplianceChart() {
                   fontSize: "12px",
                   color: "var(--color-foreground)",
                 }}
-                formatter={(value: number) => [`${value}%`, "Cumplimiento"]}
+                formatter={(value: number, _: string, entry) => [
+                  new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 0 }).format(value),
+                  `Monto (${entry.payload.cantidad} donación${entry.payload.cantidad !== 1 ? "es" : ""})`,
+                ]}
               />
               <Line
                 type="monotone"
-                dataKey="cumplimiento"
+                dataKey="monto"
                 stroke="var(--color-chart-1)"
                 strokeWidth={2.5}
                 dot={{ fill: "var(--color-chart-1)", r: 4, strokeWidth: 0 }}
