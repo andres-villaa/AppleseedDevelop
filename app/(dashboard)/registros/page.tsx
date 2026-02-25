@@ -192,7 +192,7 @@ function getEstatusbadge(estatus: Donante["estatus_expediente"]) {
     case "en_revision":
       return <Badge variant="default" className="bg-primary text-primary-foreground text-[10px]">En Revisión</Badge>
     case "incompleto":
-      return <Badge variant="destructive" className="bg-destructive text-destructive-foreground text-[10px]">Incompleto</Badge>
+      return <Badge variant="destructive" className="bg-destructive text-white text-[10px]">Incompleto</Badge>
   }
 }
 
@@ -530,6 +530,6 @@ function getEstatusband(estatus: Donante["estatus_expediente"]) {
     case "en_revision":
       return <Badge variant="default" className="bg-primary text-primary-foreground text-[10px]">En Revisión</Badge>
     case "incompleto":
-      return <Badge variant="destructive" className="bg-destructive text-destructive-foreground text-[10px]">Expediente Incompleto</Badge>
+      return <Badge variant="destructive" className="bg-destructive text-white text-[10px]">Expediente Incompleto</Badge>
   }
 }
