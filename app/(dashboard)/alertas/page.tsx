@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { DashboardHeader } from "@/components/dashboard-header"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,13 +15,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import {
@@ -30,205 +23,164 @@ import {
   AlertCircle,
   Clock,
   CheckCircle,
-  XCircle,
   Shield,
   ArrowRight,
-  Filter,
+  FileWarning,
+  UserCheck,
+  ReceiptText,
+  FileX,
 } from "lucide-react"
+import type { AlertaCumplimiento } from "@/lib/types"
 
-interface Alert {
-  id: string
-  titulo: string
-  descripcion: string
-  tipo: "transaccion" | "documento" | "comportamiento" | "lista_negra"
-  severidad: "critica" | "alta" | "media" | "baja"
-  estado: "nueva" | "en_investigacion" | "resuelta" | "descartada"
-  registro: string
-  fecha: string
-  asignado: string
-}
-
-const alerts: Alert[] = [
+const alertas: AlertaCumplimiento[] = [
   {
-    id: "ALT-001",
-    titulo: "Transaccion inusual detectada",
-    descripcion: "Multiples transferencias internacionales por montos que superan el umbral de $50,000 USD en un periodo de 48 horas.",
-    tipo: "transaccion",
-    severidad: "critica",
-    estado: "nueva",
-    registro: "Global Trading S.A.",
-    fecha: "2026-02-18",
-    asignado: "Maria Alvarez",
+    alerta_id: 1,
+    organizacion_id: "org-001",
+    titulo: "Donación inusual detectada",
+    mensaje: "Múltiples donaciones por montos que superan el umbral de 645 UMAs en un período de 48 horas. Se requiere reporte a la SHCP.",
+    tipo_alerta: "donacion_inusual",
+    atendida: false,
+    created_at: "2026-02-18",
+    donante_nombre: "Global Trading S.A.",
   },
   {
-    id: "ALT-002",
-    titulo: "Documento vencido",
-    descripcion: "La identificacion oficial presentada tiene una vigencia expirada desde hace 6 meses.",
-    tipo: "documento",
-    severidad: "media",
-    estado: "en_investigacion",
-    registro: "Roberto Sanchez Diaz",
-    fecha: "2026-02-17",
-    asignado: "Luis Torres",
+    alerta_id: 2,
+    organizacion_id: "org-001",
+    titulo: "Documento de expediente vencido",
+    mensaje: "La identificación oficial presentada tiene una vigencia expirada desde hace 6 meses. El expediente no puede marcarse como completo.",
+    tipo_alerta: "documento_vencido",
+    atendida: false,
+    created_at: "2026-02-17",
+    donante_nombre: "Roberto Sanchez Diaz",
   },
   {
-    id: "ALT-003",
-    titulo: "Coincidencia en lista PEP",
-    descripcion: "El beneficiario final presenta coincidencia parcial con una persona politicamente expuesta.",
-    tipo: "lista_negra",
-    severidad: "alta",
-    estado: "en_investigacion",
-    registro: "Inversiones del Norte S.A.",
-    fecha: "2026-02-16",
-    asignado: "Maria Alvarez",
+    alerta_id: 3,
+    organizacion_id: "org-001",
+    titulo: "Donante clasificado como PEP",
+    mensaje: "El donante presenta coincidencia con la lista de Personas Políticamente Expuestas. Se requiere diligencia debida reforzada antes de aceptar donaciones.",
+    tipo_alerta: "pep",
+    atendida: false,
+    created_at: "2026-02-16",
+    donante_nombre: "Roberto Sanchez Diaz",
   },
   {
-    id: "ALT-004",
-    titulo: "Patron de fraccionamiento",
-    descripcion: "Se detectaron 12 depositos consecutivos por montos justo debajo del umbral de reporte.",
-    tipo: "comportamiento",
-    severidad: "alta",
-    estado: "nueva",
-    registro: "Ana Gutierrez Vega",
-    fecha: "2026-02-15",
-    asignado: "Sin asignar",
+    alerta_id: 4,
+    organizacion_id: "org-001",
+    titulo: "Reporte PLD pendiente de envío",
+    mensaje: "Existen 3 donaciones que superan el umbral de reporte y que aún no han sido reportadas al sistema PLD de la SHCP.",
+    tipo_alerta: "reporte_pendiente",
+    atendida: false,
+    created_at: "2026-02-15",
+    donante_nombre: undefined,
   },
   {
-    id: "ALT-005",
-    titulo: "Documentacion KYC incompleta",
-    descripcion: "El expediente del cliente no cuenta con comprobante de domicilio vigente ni constancia fiscal.",
-    tipo: "documento",
-    severidad: "baja",
-    estado: "resuelta",
-    registro: "Tech Solutions Mexico",
-    fecha: "2026-02-14",
-    asignado: "Luis Torres",
+    alerta_id: 5,
+    organizacion_id: "org-001",
+    titulo: "Expediente KYC incompleto",
+    mensaje: "El expediente del donante no cuenta con comprobante de domicilio vigente ni constancia de situación fiscal.",
+    tipo_alerta: "expediente_incompleto",
+    atendida: true,
+    created_at: "2026-02-14",
+    donante_nombre: "Ana Gutierrez Vega",
   },
   {
-    id: "ALT-006",
-    titulo: "Actividad fuera de perfil",
-    descripcion: "Operaciones por $2.3M MXN que no corresponden al perfil transaccional declarado.",
-    tipo: "transaccion",
-    severidad: "critica",
-    estado: "nueva",
-    registro: "Exportadora Pacific S.A.",
-    fecha: "2026-02-13",
-    asignado: "Maria Alvarez",
+    alerta_id: 6,
+    organizacion_id: "org-001",
+    titulo: "Donación inusual — patrón fraccionado",
+    mensaje: "Se detectaron 8 donaciones consecutivas por montos justo debajo del umbral de reporte, sugiriendo posible fraccionamiento.",
+    tipo_alerta: "donacion_inusual",
+    atendida: true,
+    created_at: "2026-02-13",
+    donante_nombre: "Exportadora Pacific S.A.",
   },
 ]
 
-function getSeverityBadge(severidad: Alert["severidad"]) {
-  switch (severidad) {
-    case "critica":
-      return <Badge variant="destructive" className="bg-destructive text-destructive-foreground text-[10px]">Critica</Badge>
-    case "alta":
-      return <Badge variant="outline" className="border-destructive text-destructive text-[10px]">Alta</Badge>
-    case "media":
-      return <Badge variant="outline" className="border-warning text-warning-foreground bg-warning/10 text-[10px]">Media</Badge>
-    case "baja":
-      return <Badge variant="secondary" className="text-[10px]">Baja</Badge>
-  }
-}
-
-function getStatusIcon(estado: Alert["estado"]) {
-  switch (estado) {
-    case "nueva":
-      return <AlertCircle className="size-4 text-destructive" />
-    case "en_investigacion":
-      return <Clock className="size-4 text-primary" />
-    case "resuelta":
-      return <CheckCircle className="size-4 text-success" />
-    case "descartada":
-      return <XCircle className="size-4 text-muted-foreground" />
-  }
-}
-
-function getStatusLabel(estado: Alert["estado"]) {
-  switch (estado) {
-    case "nueva":
-      return "Nueva"
-    case "en_investigacion":
-      return "En Investigacion"
-    case "resuelta":
-      return "Resuelta"
-    case "descartada":
-      return "Descartada"
-  }
-}
-
-function getTypeIcon(tipo: Alert["tipo"]) {
+function getTipoIcon(tipo: AlertaCumplimiento["tipo_alerta"]) {
   switch (tipo) {
-    case "transaccion":
-      return <AlertTriangle className="size-4" />
-    case "documento":
-      return <AlertCircle className="size-4" />
-    case "comportamiento":
-      return <Shield className="size-4" />
-    case "lista_negra":
-      return <AlertTriangle className="size-4" />
+    case "donacion_inusual": return <AlertTriangle className="size-4" />
+    case "pep": return <UserCheck className="size-4" />
+    case "expediente_incompleto": return <FileWarning className="size-4" />
+    case "reporte_pendiente": return <ReceiptText className="size-4" />
+    case "documento_vencido": return <FileX className="size-4" />
   }
 }
 
-const alertCounts = {
-  todas: alerts.length,
-  nuevas: alerts.filter((a) => a.estado === "nueva").length,
-  investigacion: alerts.filter((a) => a.estado === "en_investigacion").length,
-  resueltas: alerts.filter((a) => a.estado === "resuelta" || a.estado === "descartada").length,
+function getTipoLabel(tipo: AlertaCumplimiento["tipo_alerta"]) {
+  switch (tipo) {
+    case "donacion_inusual": return "Donación Inusual"
+    case "pep": return "PEP"
+    case "expediente_incompleto": return "Expediente Incompleto"
+    case "reporte_pendiente": return "Reporte Pendiente"
+    case "documento_vencido": return "Documento Vencido"
+  }
+}
+
+function getTipoBadge(tipo: AlertaCumplimiento["tipo_alerta"]) {
+  switch (tipo) {
+    case "donacion_inusual":
+      return <Badge variant="destructive" className="bg-destructive text-destructive-foreground text-[10px]">Donación Inusual</Badge>
+    case "pep":
+      return <Badge variant="outline" className="border-destructive text-destructive text-[10px]">PEP</Badge>
+    case "reporte_pendiente":
+      return <Badge variant="outline" className="border-warning text-warning-foreground bg-warning/10 text-[10px]">Reporte Pendiente</Badge>
+    case "expediente_incompleto":
+      return <Badge variant="secondary" className="text-[10px]">Expediente Incompleto</Badge>
+    case "documento_vencido":
+      return <Badge variant="secondary" className="text-[10px]">Documento Vencido</Badge>
+  }
 }
 
 export default function AlertasPage() {
   const [search, setSearch] = useState("")
-  const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null)
-  const [tab, setTab] = useState("todas")
+  const [selectedAlerta, setSelectedAlerta] = useState<AlertaCumplimiento | null>(null)
+  const [tab, setTab] = useState("pendientes")
 
-  const filtered = alerts.filter((a) => {
-    const matchSearch =
-      a.titulo.toLowerCase().includes(search.toLowerCase()) ||
-      a.registro.toLowerCase().includes(search.toLowerCase()) ||
-      a.id.toLowerCase().includes(search.toLowerCase())
+  const pendientes = alertas.filter(a => !a.atendida)
+  const atendidas = alertas.filter(a => a.atendida)
+  const current = tab === "pendientes" ? pendientes : atendidas
 
-    if (tab === "todas") return matchSearch
-    if (tab === "nuevas") return matchSearch && a.estado === "nueva"
-    if (tab === "investigacion") return matchSearch && a.estado === "en_investigacion"
-    if (tab === "resueltas") return matchSearch && (a.estado === "resuelta" || a.estado === "descartada")
-    return matchSearch
-  })
+  const filtered = current.filter((a) =>
+    a.titulo.toLowerCase().includes(search.toLowerCase()) ||
+    (a.donante_nombre ?? "").toLowerCase().includes(search.toLowerCase()) ||
+    getTipoLabel(a.tipo_alerta).toLowerCase().includes(search.toLowerCase())
+  )
 
   return (
     <>
       <DashboardHeader
         title="Alertas y Casos"
-        description="Monitoreo y gestion de alertas ALD"
+        description="Monitoreo de alertas de cumplimiento ALD"
       />
       <div className="flex flex-1 flex-col gap-4 p-4 lg:p-6">
+
         {/* Summary Cards */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Card className="border-l-4 border-l-destructive">
             <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground">Alertas Nuevas</p>
-              <p className="text-2xl font-bold mt-1">{alertCounts.nuevas}</p>
-              <p className="text-[11px] text-destructive mt-1">Requieren atencion inmediata</p>
+              <p className="text-xs text-muted-foreground">Pendientes</p>
+              <p className="text-2xl font-bold mt-1">{pendientes.length}</p>
+              <p className="text-[11px] text-destructive mt-1">Requieren atención</p>
             </CardContent>
           </Card>
-          <Card className="border-l-4 border-l-primary">
+          <Card className="border-l-4 border-l-destructive">
             <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground">En Investigacion</p>
-              <p className="text-2xl font-bold mt-1">{alertCounts.investigacion}</p>
-              <p className="text-[11px] text-primary mt-1">Casos en proceso</p>
+              <p className="text-xs text-muted-foreground">Donaciones Inusuales</p>
+              <p className="text-2xl font-bold mt-1">{alertas.filter(a => a.tipo_alerta === "donacion_inusual" && !a.atendida).length}</p>
+              <p className="text-[11px] text-destructive mt-1">Sin atender</p>
+            </CardContent>
+          </Card>
+          <Card className="border-l-4 border-l-warning">
+            <CardContent className="p-4">
+              <p className="text-xs text-muted-foreground">Reportes Pendientes PLD</p>
+              <p className="text-2xl font-bold mt-1">{alertas.filter(a => a.tipo_alerta === "reporte_pendiente" && !a.atendida).length}</p>
+              <p className="text-[11px] text-muted-foreground mt-1">Por enviar a SHCP</p>
             </CardContent>
           </Card>
           <Card className="border-l-4 border-l-success">
             <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground">Resueltas</p>
-              <p className="text-2xl font-bold mt-1">{alertCounts.resueltas}</p>
+              <p className="text-xs text-muted-foreground">Atendidas</p>
+              <p className="text-2xl font-bold mt-1">{atendidas.length}</p>
               <p className="text-[11px] text-success mt-1">Casos cerrados</p>
-            </CardContent>
-          </Card>
-          <Card className="border-l-4 border-l-border">
-            <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground">Total del Mes</p>
-              <p className="text-2xl font-bold mt-1">{alertCounts.todas}</p>
-              <p className="text-[11px] text-muted-foreground mt-1">Febrero 2026</p>
             </CardContent>
           </Card>
         </div>
@@ -238,10 +190,14 @@ export default function AlertasPage() {
           <Tabs value={tab} onValueChange={setTab}>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <TabsList>
-                <TabsTrigger value="todas">Todas ({alertCounts.todas})</TabsTrigger>
-                <TabsTrigger value="nuevas">Nuevas ({alertCounts.nuevas})</TabsTrigger>
-                <TabsTrigger value="investigacion">En Investigacion ({alertCounts.investigacion})</TabsTrigger>
-                <TabsTrigger value="resueltas">Resueltas ({alertCounts.resueltas})</TabsTrigger>
+                <TabsTrigger value="pendientes">
+                  <AlertCircle className="size-3.5 mr-1.5" />
+                  Pendientes ({pendientes.length})
+                </TabsTrigger>
+                <TabsTrigger value="atendidas">
+                  <CheckCircle className="size-3.5 mr-1.5" />
+                  Atendidas ({atendidas.length})
+                </TabsTrigger>
               </TabsList>
               <div className="relative max-w-sm">
                 <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -260,55 +216,46 @@ export default function AlertasPage() {
                   <Card>
                     <CardContent className="flex flex-col items-center justify-center py-12">
                       <Shield className="size-10 text-muted-foreground/40 mb-3" />
-                      <p className="text-sm font-medium text-muted-foreground">
-                        No se encontraron alertas
-                      </p>
-                      <p className="text-xs text-muted-foreground/60 mt-1">
-                        Intenta cambiar los filtros de busqueda
-                      </p>
+                      <p className="text-sm font-medium text-muted-foreground">No se encontraron alertas</p>
+                      <p className="text-xs text-muted-foreground/60 mt-1">Intenta cambiar los filtros de búsqueda</p>
                     </CardContent>
                   </Card>
                 ) : (
-                  filtered.map((alert) => (
+                  filtered.map((alerta) => (
                     <Card
-                      key={alert.id}
+                      key={alerta.alerta_id}
                       className="cursor-pointer hover:shadow-md transition-shadow"
-                      onClick={() => setSelectedAlert(alert)}
+                      onClick={() => setSelectedAlerta(alerta)}
                     >
                       <CardContent className="p-4">
                         <div className="flex items-start gap-4">
                           <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
-                            {getTypeIcon(alert.tipo)}
+                            {getTipoIcon(alerta.tipo_alerta)}
                           </div>
                           <div className="flex flex-1 flex-col gap-1.5 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-mono text-[11px] text-muted-foreground">
-                                {alert.id}
-                              </span>
-                              {getSeverityBadge(alert.severidad)}
-                              <div className="flex items-center gap-1">
-                                {getStatusIcon(alert.estado)}
-                                <span className="text-xs text-muted-foreground">
-                                  {getStatusLabel(alert.estado)}
-                                </span>
-                              </div>
+                              {getTipoBadge(alerta.tipo_alerta)}
+                              {alerta.atendida ? (
+                                <div className="flex items-center gap-1">
+                                  <CheckCircle className="size-4 text-success" />
+                                  <span className="text-xs text-muted-foreground">Atendida</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1">
+                                  <Clock className="size-4 text-destructive" />
+                                  <span className="text-xs text-muted-foreground">Pendiente</span>
+                                </div>
+                              )}
                             </div>
-                            <h3 className="text-sm font-semibold text-foreground">
-                              {alert.titulo}
-                            </h3>
-                            <p className="text-xs text-muted-foreground line-clamp-1">
-                              {alert.descripcion}
-                            </p>
+                            <h3 className="text-sm font-semibold">{alerta.titulo}</h3>
+                            <p className="text-xs text-muted-foreground line-clamp-1">{alerta.mensaje}</p>
                             <div className="flex items-center gap-4 mt-1">
-                              <span className="text-[11px] text-muted-foreground">
-                                Registro: <span className="font-medium text-foreground">{alert.registro}</span>
-                              </span>
-                              <span className="text-[11px] text-muted-foreground">
-                                {alert.fecha}
-                              </span>
-                              <span className="text-[11px] text-muted-foreground">
-                                Asignado: {alert.asignado}
-                              </span>
+                              {alerta.donante_nombre && (
+                                <span className="text-[11px] text-muted-foreground">
+                                  Donante: <span className="font-medium text-foreground">{alerta.donante_nombre}</span>
+                                </span>
+                              )}
+                              <span className="text-[11px] text-muted-foreground">{alerta.created_at}</span>
                             </div>
                           </div>
                           <Button variant="ghost" size="icon" className="shrink-0 size-8">
@@ -325,105 +272,76 @@ export default function AlertasPage() {
         </div>
 
         {/* Alert Detail Dialog */}
-        <Dialog open={!!selectedAlert} onOpenChange={() => setSelectedAlert(null)}>
-          <DialogContent className="sm:max-w-2xl">
+        <Dialog open={!!selectedAlerta} onOpenChange={() => setSelectedAlerta(null)}>
+          <DialogContent className="sm:max-w-lg">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <span>Detalle de Alerta</span>
-                {selectedAlert && getSeverityBadge(selectedAlert.severidad)}
+                Detalle de Alerta
+                {selectedAlerta && getTipoBadge(selectedAlerta.tipo_alerta)}
               </DialogTitle>
               <DialogDescription>
-                {selectedAlert?.id} - {selectedAlert?.titulo}
+                {selectedAlerta?.titulo}
               </DialogDescription>
             </DialogHeader>
-            {selectedAlert && (
+            {selectedAlerta && (
               <div className="flex flex-col gap-5 pt-2">
                 <div className="rounded-lg bg-muted/50 p-4">
-                  <p className="text-sm text-foreground leading-relaxed">
-                    {selectedAlert.descripcion}
-                  </p>
+                  <p className="text-sm text-foreground leading-relaxed">{selectedAlerta.mensaje}</p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs text-muted-foreground">Tipo de Alerta</p>
-                    <p className="text-sm font-medium mt-0.5 capitalize">{selectedAlert.tipo.replace("_", " ")}</p>
+                    <p className="text-sm font-medium mt-0.5">{getTipoLabel(selectedAlerta.tipo_alerta)}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Estado</p>
                     <div className="flex items-center gap-1.5 mt-1">
-                      {getStatusIcon(selectedAlert.estado)}
-                      <span className="text-sm">{getStatusLabel(selectedAlert.estado)}</span>
+                      {selectedAlerta.atendida
+                        ? <CheckCircle className="size-4 text-success" />
+                        : <Clock className="size-4 text-destructive" />
+                      }
+                      <span className="text-sm">{selectedAlerta.atendida ? "Atendida" : "Pendiente"}</span>
                     </div>
                   </div>
+                  {selectedAlerta.donante_nombre && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Donante Asociado</p>
+                      <p className="text-sm font-medium mt-0.5">{selectedAlerta.donante_nombre}</p>
+                    </div>
+                  )}
                   <div>
-                    <p className="text-xs text-muted-foreground">Registro Asociado</p>
-                    <p className="text-sm font-medium mt-0.5">{selectedAlert.registro}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Fecha de Deteccion</p>
-                    <p className="text-sm mt-0.5">{selectedAlert.fecha}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Asignado a</p>
-                    <p className="text-sm mt-0.5">{selectedAlert.asignado}</p>
+                    <p className="text-xs text-muted-foreground">Fecha de Detección</p>
+                    <p className="text-sm mt-0.5">{selectedAlerta.created_at}</p>
                   </div>
                 </div>
 
                 <Separator />
 
-                <div className="flex flex-col gap-3">
-                  <h4 className="text-sm font-semibold">Acciones</h4>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="flex flex-col gap-2">
-                      <Label>Cambiar Estado</Label>
-                      <Select defaultValue={selectedAlert.estado}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="nueva">Nueva</SelectItem>
-                          <SelectItem value="en_investigacion">En Investigacion</SelectItem>
-                          <SelectItem value="resuelta">Resuelta</SelectItem>
-                          <SelectItem value="descartada">Descartada</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <Label>Reasignar</Label>
-                      <Select defaultValue="maria">
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="maria">Maria Alvarez</SelectItem>
-                          <SelectItem value="luis">Luis Torres</SelectItem>
-                          <SelectItem value="ana">Ana Garcia</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Label>Notas de Investigacion</Label>
+                {!selectedAlerta.atendida && (
+                  <div className="flex flex-col gap-3">
+                    <h4 className="text-sm font-semibold">Notas de Resolución</h4>
                     <Textarea
-                      placeholder="Escribe las notas de la investigacion aqui..."
+                      placeholder="Describe las acciones tomadas para atender esta alerta..."
                       className="min-h-[80px] resize-none"
                     />
                   </div>
-                </div>
+                )}
 
                 <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setSelectedAlert(null)}>
-                    Cerrar
-                  </Button>
-                  <Button onClick={() => setSelectedAlert(null)}>
-                    Guardar Cambios
-                  </Button>
+                  <Button variant="outline" onClick={() => setSelectedAlerta(null)}>Cerrar</Button>
+                  {!selectedAlerta.atendida && (
+                    <Button onClick={() => setSelectedAlerta(null)}>
+                      <CheckCircle className="mr-2 size-4" />
+                      Marcar como Atendida
+                    </Button>
+                  )}
                 </div>
               </div>
             )}
           </DialogContent>
         </Dialog>
+
       </div>
     </>
   )

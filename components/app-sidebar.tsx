@@ -13,6 +13,8 @@ import {
   LogOut,
   ChevronDown,
   User,
+  HandCoins,
+  Receipt,
 } from "lucide-react"
 
 import {
@@ -44,9 +46,19 @@ const mainNav = [
     icon: LayoutDashboard,
   },
   {
-    title: "Registros",
+    title: "Donantes",
     href: "/registros",
     icon: Users,
+  },
+  {
+    title: "Donaciones",
+    href: "/donaciones",
+    icon: HandCoins,
+  },
+  {
+    title: "Gastos",
+    href: "/gastos",
+    icon: Receipt,
   },
   {
     title: "Documentos",
