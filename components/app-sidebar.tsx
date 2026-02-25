@@ -7,7 +7,6 @@ import {
   Users,
   FileText,
   Shield,
-  Settings,
   Bell,
   LogOut,
   ChevronDown,
@@ -67,11 +66,6 @@ const mainNav = [
 ]
 
 const secondaryNav = [
-  {
-    title: "Configuracion",
-    href: "/configuracion",
-    icon: Settings,
-  },
   {
     title: "Notificaciones",
     href: "/notificaciones",
