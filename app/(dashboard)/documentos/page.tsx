@@ -85,6 +85,7 @@ export default function DocumentosPage() {
   const [filterTipoOrg, setFilterTipoOrg] = useState("all")
   const [filterTipoDon, setFilterTipoDon] = useState("all")
   const [isUploadOpen, setIsUploadOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState("organizacion")
 
   const filteredOrg = docsOrg.filter((d) => {
     const matchSearch = d.titulo.toLowerCase().includes(search.toLowerCase())
@@ -195,34 +196,53 @@ export default function DocumentosPage() {
         </div>
 
         {/* Tabs por tipo */}
-        <Tabs defaultValue="organizacion">
-          <TabsList>
-            <TabsTrigger value="organizacion" className="gap-2">
-              <Building2 className="size-3.5" />
-              Organización ({docsOrg.length})
-            </TabsTrigger>
-            <TabsTrigger value="donantes" className="gap-2">
-              <Users className="size-3.5" />
-              Donantes ({docsDonante.length})
-            </TabsTrigger>
-          </TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <div className="flex items-center justify-between mb-4">
+            <TabsList>
+              <TabsTrigger value="organizacion" className="gap-2">
+                <Building2 className="size-3.5" />
+                Organización ({docsOrg.length})
+              </TabsTrigger>
+              <TabsTrigger value="donantes" className="gap-2">
+                <Users className="size-3.5" />
+                Donantes ({docsDonante.length})
+              </TabsTrigger>
+            </TabsList>
+
+            <div className="ml-8">
+              {activeTab === "organizacion" ? (
+                <Select value={filterTipoOrg} onValueChange={setFilterTipoOrg}>
+                  <SelectTrigger className="w-[150px] h-9">
+                    <Filter className="mr-2 size-3.5" />
+                    <SelectValue placeholder="Tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="legal">Legal</SelectItem>
+                    <SelectItem value="fiscal">Fiscal</SelectItem>
+                    <SelectItem value="gasto">Gasto</SelectItem>
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Select value={filterTipoDon} onValueChange={setFilterTipoDon}>
+                  <SelectTrigger className="w-[180px] h-9">
+                    <Filter className="mr-2 size-3.5" />
+                    <SelectValue placeholder="Tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="identificación">Identificación Oficial</SelectItem>
+                    <SelectItem value="comprobante">Comprobante de Domicilio</SelectItem>
+                    <SelectItem value="constancia">Constancia de Donación</SelectItem>
+                    <SelectItem value="declaración">Declaración de PEP</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          </div>
 
           {/* Tab: Documentos Organización */}
-          <TabsContent value="organizacion" className="mt-4">
-            <div className="flex items-center gap-3 mb-3">
-              <Select value={filterTipoOrg} onValueChange={setFilterTipoOrg}>
-                <SelectTrigger className="w-[150px] h-9">
-                  <Filter className="mr-2 size-3.5" />
-                  <SelectValue placeholder="Tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="legal">Legal</SelectItem>
-                  <SelectItem value="fiscal">Fiscal</SelectItem>
-                  <SelectItem value="gasto">Gasto</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <TabsContent value="organizacion" className="mt-0">
             <Card>
               <CardHeader className="py-3 px-5">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -283,22 +303,7 @@ export default function DocumentosPage() {
           </TabsContent>
 
           {/* Tab: Documentos Donantes */}
-          <TabsContent value="donantes" className="mt-4">
-            <div className="flex items-center gap-3 mb-3">
-              <Select value={filterTipoDon} onValueChange={setFilterTipoDon}>
-                <SelectTrigger className="w-[180px] h-9">
-                  <Filter className="mr-2 size-3.5" />
-                  <SelectValue placeholder="Tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="identificación">Identificación Oficial</SelectItem>
-                  <SelectItem value="comprobante">Comprobante de Domicilio</SelectItem>
-                  <SelectItem value="constancia">Constancia de Donación</SelectItem>
-                  <SelectItem value="pep">Declaración PEP</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <TabsContent value="donantes" className="mt-0">
             <Card>
               <CardHeader className="py-3 px-5">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
