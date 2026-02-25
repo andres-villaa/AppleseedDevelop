@@ -87,10 +87,10 @@ export function AppSidebar() {
           </div>
           <div className="flex flex-col">
             <span className="text-sm font-semibold text-sidebar-foreground tracking-tight">
-              CumplAML
+              Appleseed
             </span>
             <span className="text-[11px] text-sidebar-foreground/60">
-              Cumplimiento ALD
+              Prevención de Lavado de Activos
             </span>
           </div>
         </Link>
