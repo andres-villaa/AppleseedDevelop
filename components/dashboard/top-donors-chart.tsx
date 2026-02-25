@@ -95,7 +95,7 @@ export function TopDonorsChart() {
                                 width={130}
                                 stroke="var(--color-muted-foreground)"
                             />
-                            <Tooltip content={<CustomTooltip />} cursor={{ fill: "var(--color-muted)/20" }} />
+                            <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(0, 0, 0, 0.05)" }} />
                             <Bar dataKey="monto" name="Donación acumulada" radius={[0, 4, 4, 0]}>
                                 {data.map((entry, i) => (
                                     <Cell key={i} fill={entry.color} />

@@ -81,6 +81,7 @@ export function RiskChart() {
                 allowDecimals={false}
               />
               <Tooltip
+                cursor={{ fill: "rgba(0,0,0,0.05)" }}
                 contentStyle={{
                   backgroundColor: "var(--color-card)",
                   border: "1px solid var(--color-border)",
