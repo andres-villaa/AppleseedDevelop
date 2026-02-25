@@ -1,5 +1,5 @@
 import { DashboardHeader } from "@/components/dashboard-header"
-import { StatCards } from "@/components/dashboard/stat-cards"
+import { DonantesKPI, DonacionesKPI, GastosKPI } from "@/components/dashboard/stat-cards"
 import { RiskChart } from "@/components/dashboard/risk-chart"
 import { ComplianceChart } from "@/components/dashboard/compliance-chart"
 import { ExpensesBreakdownChart } from "@/components/dashboard/expenses-breakdown-chart"
@@ -14,27 +14,38 @@ export default function DashboardPage() {
         title="Panel General"
         description="Resumen de cumplimiento y actividad ALD"
       />
-      <div className="flex flex-1 flex-col gap-6 p-4 lg:p-6">
-        {/* Métricas KPI */}
-        <StatCards />
+      <div className="flex flex-1 flex-col gap-8 p-4 lg:p-6">
 
-        {/* Fila 1: Donantes vs PLD (grande) + Donaciones por mes */}
-        <div className="grid gap-6 lg:grid-cols-3">
-          <RiskChart />
-          <ComplianceChart />
-        </div>
+        {/* ── SECCIÓN DONANTES ─────────────────────────────────────────────── */}
+        <section className="flex flex-col gap-4">
+          <DonantesKPI />
+          {/* Gráficas de Donantes */}
+          <div className="grid gap-4 lg:grid-cols-3">
+            <TopDonorsChart />   {/* col-span-2 */}
+            <DonorsStatusChart />
+          </div>
+        </section>
 
-        {/* Fila 2: Top Donantes (grande) + Perfil Donantes + Gastos por Categoría */}
-        <div className="grid gap-6 lg:grid-cols-3">
-          <TopDonorsChart />
-          <DonorsStatusChart />
-        </div>
+        {/* ── SECCIÓN DONACIONES ───────────────────────────────────────────── */}
+        <section className="flex flex-col gap-4">
+          <DonacionesKPI />
+          {/* Gráficas de Donaciones */}
+          <div className="grid gap-4 lg:grid-cols-3">
+            <RiskChart />        {/* col-span-2 */}
+            <ComplianceChart />
+          </div>
+        </section>
 
-        {/* Fila 3: Actividad de hoy (gráfica área) + Gastos por categoría */}
-        <div className="grid gap-6 lg:grid-cols-3">
-          <ActivityChart />
-          <ExpensesBreakdownChart />
-        </div>
+        {/* ── SECCIÓN GASTOS + ACTIVIDAD ───────────────────────────────────── */}
+        <section className="flex flex-col gap-4">
+          <GastosKPI />
+          {/* Gráficas de Gastos y Actividad del sistema */}
+          <div className="grid gap-4 lg:grid-cols-3">
+            <ActivityChart />    {/* col-span-2 */}
+            <ExpensesBreakdownChart />
+          </div>
+        </section>
+
       </div>
     </>
   )

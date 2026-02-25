@@ -6,7 +6,6 @@ import {
   LayoutDashboard,
   Users,
   FileText,
-  AlertTriangle,
   Shield,
   Settings,
   Bell,
@@ -65,12 +64,6 @@ const mainNav = [
     href: "/documentos",
     icon: FileText,
   },
-  {
-    title: "Alertas y Casos",
-    href: "/alertas",
-    icon: AlertTriangle,
-    badge: "3",
-  },
 ]
 
 const secondaryNav = [
@@ -115,7 +108,7 @@ export function AppSidebar() {
           <SidebarGroupLabel>Principal</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {mainNav.map((item) => (
+              {(mainNav as { title: string; href: string; icon: React.ElementType; badge?: string }[]).map((item) => (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
                     asChild

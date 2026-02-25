@@ -1,6 +1,6 @@
 "use client"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import {
   Users,
@@ -48,92 +48,17 @@ const gastosPorCategoria = [...new Set(mockGastos.map(g => g.categoria))].map(ca
   total: mockGastos.filter(g => g.categoria === cat).reduce((s, g) => s + g.monto, 0),
 })).sort((a, b) => b.total - a.total)
 
-// ─── Sections ─────────────────────────────────────────────────────────────────
+// ─── Shared StatCard component ─────────────────────────────────────────────────
 
-const donanteStats = [
-  {
-    label: "Total Donantes",
-    value: totalDonantes.toString(),
-    sub: "registrados",
-    icon: Users,
-    color: "bg-primary/10 text-primary",
-  },
-  {
-    label: "Expedientes Completos",
-    value: expedientesCompletos.toString(),
-    sub: `${Math.round((expedientesCompletos / totalDonantes) * 100)}% del total`,
-    icon: UserCheck,
-    color: "bg-success/10 text-success",
-  },
-  {
-    label: "Expedientes Pendientes",
-    value: expedientesIncompletos.toString(),
-    sub: "incompletos o en revisión",
-    icon: UserX,
-    color: "bg-warning/10 text-warning-foreground",
-  },
-  {
-    label: "Donantes PEP",
-    value: donantesPEP.toString(),
-    sub: "diligencia reforzada",
-    icon: ShieldAlert,
-    color: "bg-destructive/10 text-destructive",
-  },
-]
+type StatItem = {
+  label: string
+  value: string
+  sub: string
+  icon: React.ElementType
+  color: string
+}
 
-const donacionStats = [
-  {
-    label: "Total Recaudado",
-    value: formatMXN(totalRecaudado),
-    sub: `${mockDonaciones.length} donaciones`,
-    icon: TrendingUp,
-    color: "bg-primary/10 text-primary",
-  },
-  {
-    label: "Requieren Reporte PLD",
-    value: donacionesRequierenPLD.toString(),
-    sub: `≥ 645 UMAs (${formatMXN(umbralPLD)})`,
-    icon: FileWarning,
-    color: "bg-warning/10 text-warning-foreground",
-  },
-  {
-    label: "Pendientes PLD",
-    value: donacionesPendientesPLD.toString(),
-    sub: "sin reportar a SHCP",
-    icon: FileWarning,
-    color: "bg-destructive/10 text-destructive",
-  },
-  {
-    label: "Reportadas SAT",
-    value: donacionesReportadasSAT.toString(),
-    sub: `${mockDonaciones.length - donacionesReportadasSAT} pendientes`,
-    icon: CircleCheck,
-    color: "bg-success/10 text-success",
-  },
-]
-
-const gastoStats = [
-  {
-    label: "Total Gastado",
-    value: formatMXN(totalGastado),
-    sub: `${mockGastos.length} registros`,
-    icon: Wallet,
-    color: "bg-primary/10 text-primary",
-  },
-  ...gastosPorCategoria.slice(0, 3).map(({ cat, total }) => ({
-    label: cat,
-    value: formatMXN(total),
-    sub: `${mockGastos.filter(g => g.categoria === cat).length} registros`,
-    icon: Receipt,
-    color: "bg-muted text-muted-foreground",
-  })),
-]
-
-function StatRow({
-  stats,
-}: {
-  stats: { label: string; value: string; sub: string; icon: React.ElementType; color: string }[]
-}) {
+function StatRow({ stats }: { stats: StatItem[] }) {
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {stats.map((s) => (
@@ -154,38 +79,72 @@ function StatRow({
   )
 }
 
+function SectionHeader({ icon: Icon, label }: { icon: React.ElementType; label: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <Icon className="size-3.5 text-muted-foreground" />
+      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{label}</p>
+      <Separator className="flex-1" />
+    </div>
+  )
+}
+
+// ─── Exported section components ──────────────────────────────────────────────
+
+export function DonantesKPI() {
+  return (
+    <div className="flex flex-col gap-3">
+      <SectionHeader icon={Users} label="Donantes" />
+      <StatRow stats={[
+        { label: "Total Donantes", value: totalDonantes.toString(), sub: "registrados", icon: Users, color: "bg-primary/10 text-primary" },
+        { label: "Expedientes Completos", value: expedientesCompletos.toString(), sub: `${Math.round((expedientesCompletos / totalDonantes) * 100)}% del total`, icon: UserCheck, color: "bg-success/10 text-success" },
+        { label: "Expedientes Pendientes", value: expedientesIncompletos.toString(), sub: "incompletos o en revisión", icon: UserX, color: "bg-warning/10 text-warning-foreground" },
+        { label: "Donantes PEP", value: donantesPEP.toString(), sub: "diligencia reforzada", icon: ShieldAlert, color: "bg-destructive/10 text-destructive" },
+      ]} />
+    </div>
+  )
+}
+
+export function DonacionesKPI() {
+  return (
+    <div className="flex flex-col gap-3">
+      <SectionHeader icon={TrendingUp} label="Donaciones" />
+      <StatRow stats={[
+        { label: "Total Recaudado", value: formatMXN(totalRecaudado), sub: `${mockDonaciones.length} donaciones`, icon: TrendingUp, color: "bg-primary/10 text-primary" },
+        { label: "Requieren Reporte PLD", value: donacionesRequierenPLD.toString(), sub: `≥ 645 UMAs (${formatMXN(umbralPLD)})`, icon: FileWarning, color: "bg-warning/10 text-warning-foreground" },
+        { label: "Pendientes PLD", value: donacionesPendientesPLD.toString(), sub: "sin reportar a SHCP", icon: FileWarning, color: "bg-destructive/10 text-destructive" },
+        { label: "Reportadas SAT", value: donacionesReportadasSAT.toString(), sub: `${mockDonaciones.length - donacionesReportadasSAT} pendientes`, icon: CircleCheck, color: "bg-success/10 text-success" },
+      ]} />
+    </div>
+  )
+}
+
+export function GastosKPI() {
+  return (
+    <div className="flex flex-col gap-3">
+      <SectionHeader icon={Wallet} label="Gastos" />
+      <StatRow stats={[
+        { label: "Total Gastado", value: formatMXN(totalGastado), sub: `${mockGastos.length} registros`, icon: Wallet, color: "bg-primary/10 text-primary" },
+        ...gastosPorCategoria.slice(0, 3).map(({ cat, total }) => ({
+          label: cat,
+          value: formatMXN(total),
+          sub: `${mockGastos.filter(g => g.categoria === cat).length} registros`,
+          icon: Receipt,
+          color: "bg-muted text-muted-foreground",
+        })),
+      ]} />
+    </div>
+  )
+}
+
+// ─── Legacy full export (backwards compat) ────────────────────────────────────
+
 export function StatCards() {
   return (
     <div className="flex flex-col gap-5">
-      {/* Donantes */}
-      <div>
-        <div className="flex items-center gap-2 mb-3">
-          <Users className="size-3.5 text-muted-foreground" />
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Donantes</p>
-          <Separator className="flex-1" />
-        </div>
-        <StatRow stats={donanteStats} />
-      </div>
-
-      {/* Donaciones */}
-      <div>
-        <div className="flex items-center gap-2 mb-3">
-          <TrendingUp className="size-3.5 text-muted-foreground" />
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Donaciones</p>
-          <Separator className="flex-1" />
-        </div>
-        <StatRow stats={donacionStats} />
-      </div>
-
-      {/* Gastos */}
-      <div>
-        <div className="flex items-center gap-2 mb-3">
-          <Wallet className="size-3.5 text-muted-foreground" />
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Gastos</p>
-          <Separator className="flex-1" />
-        </div>
-        <StatRow stats={gastoStats} />
-      </div>
+      <DonantesKPI />
+      <DonacionesKPI />
+      <GastosKPI />
     </div>
   )
 }
