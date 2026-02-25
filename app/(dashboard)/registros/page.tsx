@@ -39,6 +39,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ShieldAlert,
+  User,
 } from "lucide-react"
 import type { Donante } from "@/lib/types"
 
@@ -202,6 +203,9 @@ export default function RegistrosPage() {
   const [filterTipo, setFilterTipo] = useState<string>("all")
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [detailDonante, setDetailDonante] = useState<Donante | null>(null)
+  const [page, setPage] = useState(1)
+
+  const ITEMS_PER_PAGE = 7
 
   const filtered = donantes.filter((d) => {
     const matchSearch =
@@ -212,6 +216,9 @@ export default function RegistrosPage() {
     const matchTipo = filterTipo === "all" || d.tipo_persona === filterTipo
     return matchSearch && matchEstatus && matchTipo
   })
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE))
+  const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE)
 
   return (
     <>
@@ -374,19 +381,37 @@ export default function RegistrosPage() {
                 {filtered.length !== donantes.length && ` filtrados de ${donantes.length}`}
               </CardTitle>
               <div className="flex items-center gap-1">
-                <Button variant="outline" size="icon" className="size-7" disabled>
+                <Button
+                  variant="outline" size="icon" className="size-7"
+                  disabled={page <= 1}
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                >
                   <ChevronLeft className="size-3.5" />
                 </Button>
-                <Button variant="outline" size="sm" className="h-7 min-w-7 px-2 text-xs bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground">
-                  1
-                </Button>
-                <Button variant="outline" size="icon" className="size-7" disabled>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                  <Button
+                    key={p}
+                    variant="outline" size="sm"
+                    className={`h-7 min-w-7 px-2 text-xs ${p === page
+                      ? "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground"
+                      : ""
+                      }`}
+                    onClick={() => setPage(p)}
+                  >
+                    {p}
+                  </Button>
+                ))}
+                <Button
+                  variant="outline" size="icon" className="size-7"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                >
                   <ChevronRight className="size-3.5" />
                 </Button>
               </div>
             </div>
           </CardHeader>
-          <CardContent className="p-0">
+          <CardContent className="p-0 overflow-y-auto max-h-[calc(100dvh-400px)]">
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
@@ -400,10 +425,13 @@ export default function RegistrosPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((donante) => (
+                {paginated.map((donante) => (
                   <TableRow key={donante.donante_id} className="cursor-pointer">
                     <TableCell className="pl-5">
                       <div className="flex items-center gap-2">
+                        <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                          <User className="size-4" />
+                        </div>
                         <div className="flex flex-col">
                           <span className="text-sm font-medium">{donante.nombre_razon_social}</span>
                           <span className="text-[11px] text-muted-foreground">{donante.email}</span>

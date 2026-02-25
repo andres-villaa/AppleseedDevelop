@@ -89,7 +89,7 @@ function getCategoriaBadgeClass(cat: string) {
     }
 }
 
-const ITEMS_PER_PAGE = 8
+const ITEMS_PER_PAGE = 7
 
 export default function GastosPage() {
     const [search, setSearch] = useState("")
@@ -262,7 +262,7 @@ export default function GastosPage() {
                             </div>
                         </div>
                     </CardHeader>
-                    <CardContent className="p-0">
+                    <CardContent className="p-0 overflow-y-auto max-h-[calc(100dvh-420px)]">
                         <Table>
                             <TableHeader>
                                 <TableRow className="hover:bg-transparent">

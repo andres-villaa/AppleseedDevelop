@@ -229,7 +229,7 @@ export default function DocumentosPage() {
                   {filteredOrg.length} documentos encontrados
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-0">
+              <CardContent className="p-0 overflow-y-auto max-h-[calc(100dvh-470px)]">
                 <Table>
                   <TableHeader>
                     <TableRow className="hover:bg-transparent">
@@ -305,7 +305,7 @@ export default function DocumentosPage() {
                   {filteredDon.length} documentos encontrados
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-0">
+              <CardContent className="p-0 overflow-y-auto max-h-[calc(100dvh-470px)]">
                 <Table>
                   <TableHeader>
                     <TableRow className="hover:bg-transparent">

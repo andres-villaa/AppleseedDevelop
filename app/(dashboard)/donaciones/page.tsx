@@ -43,6 +43,7 @@ import {
     CircleCheck,
     CircleDot,
     ShieldAlert,
+    User,
 } from "lucide-react"
 import { mockDonaciones, mockDonantes, umaActual } from "@/lib/data"
 import type { Donacion } from "@/lib/types"
@@ -75,7 +76,7 @@ function getMetodoBadge(metodo: Donacion["metodo_pago"]) {
     )
 }
 
-const ITEMS_PER_PAGE = 8
+const ITEMS_PER_PAGE = 7
 
 export default function DonacionesPage() {
     const [search, setSearch] = useState("")
@@ -298,11 +299,10 @@ export default function DonacionesPage() {
                             </div>
                         </div>
                     </CardHeader>
-                    <CardContent className="p-0">
+                    <CardContent className="p-0 overflow-y-auto max-h-[calc(100dvh-420px)]">
                         <Table>
                             <TableHeader>
                                 <TableRow className="hover:bg-transparent">
-                                    <TableHead className="pl-5 w-8">#</TableHead>
                                     <TableHead>Donante</TableHead>
                                     <TableHead className="hidden md:table-cell">Fecha</TableHead>
                                     <TableHead>Monto</TableHead>
@@ -316,11 +316,11 @@ export default function DonacionesPage() {
                             <TableBody>
                                 {paginated.map((don) => (
                                     <TableRow key={don.donacion_id} className="cursor-pointer">
-                                        <TableCell className="pl-5 text-xs text-muted-foreground font-mono">
-                                            {don.donacion_id}
-                                        </TableCell>
                                         <TableCell>
                                             <div className="flex items-center gap-2">
+                                                <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                                                    <User className="size-4" />
+                                                </div>
                                                 <div className="flex flex-col">
                                                     <span className="text-sm font-medium">{don.nombre_donante}</span>
                                                     <span className="text-[11px] text-muted-foreground">{don.donante_id}</span>
