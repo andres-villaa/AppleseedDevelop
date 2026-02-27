@@ -1,6 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useTransition } from "react"
+import { toast } from "sonner"
+import { addDonacion, markAsReportedPLD } from "@/lib/supabase/actions"
 import { DashboardHeader } from "@/components/dashboard-header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -93,6 +95,7 @@ export function DonacionesClient({
     const [page, setPage] = useState(1)
     const [isNewOpen, setIsNewOpen] = useState(false)
     const [detail, setDetail] = useState<DonacionExtendida | null>(null)
+    const [isPending, startTransition] = useTransition()
 
     const filtered = donaciones.filter((d) => {
         const matchSearch =
@@ -124,7 +127,7 @@ export function DonacionesClient({
             <div className="flex flex-1 flex-col gap-4 p-4 lg:p-6">
 
                 {/* Summary Cards */}
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid gap-4 md:grid-cols-3">
                     <Card className="border-l-4 border-l-primary">
                         <CardContent className="p-4">
                             <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
@@ -145,16 +148,7 @@ export function DonacionesClient({
                             <p className="text-[11px] text-muted-foreground mt-1">≥ 645 UMAs ({formatMXN(645 * (umaActual?.valor || 108.57))})</p>
                         </CardContent>
                     </Card>
-                    <Card className="border-l-4 border-l-destructive">
-                        <CardContent className="p-4">
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                                <FileWarning className="size-3.5" />
-                                Pendientes PLD
-                            </div>
-                            <p className="text-xl font-bold">{pendientesPLD}</p>
-                            <p className="text-[11px] text-destructive mt-1">Sin reportar a SHCP</p>
-                        </CardContent>
-                    </Card>
+
                     <Card className="border-l-4 border-l-success">
                         <CardContent className="p-4">
                             <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
@@ -220,11 +214,21 @@ export function DonacionesClient({
                                     Ingresa los datos de la donación recibida. El sistema calculará automáticamente si requiere reporte PLD.
                                 </DialogDescription>
                             </DialogHeader>
-                            <div className="flex flex-col gap-4 pt-2">
+                            <form action={(formData) => {
+                                startTransition(async () => {
+                                    const result = await addDonacion(formData)
+                                    if (result.error) {
+                                        toast.error(result.error)
+                                    } else {
+                                        toast.success("Donación registrada exitosamente")
+                                        setIsNewOpen(false)
+                                    }
+                                })
+                            }} className="flex flex-col gap-4 pt-2">
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="col-span-2 flex flex-col gap-2">
                                         <Label>Donante</Label>
-                                        <Select>
+                                        <Select name="donante_id" required>
                                             <SelectTrigger><SelectValue placeholder="Seleccionar donante" /></SelectTrigger>
                                             <SelectContent>
                                                 {donantes.map((d) => (
@@ -237,11 +241,11 @@ export function DonacionesClient({
                                     </div>
                                     <div className="flex flex-col gap-2">
                                         <Label>Monto (MXN)</Label>
-                                        <Input type="number" placeholder="Ej. 50000" />
+                                        <Input type="number" name="monto" placeholder="Ej. 50000" min="1" step="0.01" required />
                                     </div>
                                     <div className="flex flex-col gap-2">
                                         <Label>Método de Pago</Label>
-                                        <Select>
+                                        <Select name="metodo_pago" required>
                                             <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="transferencia">Transferencia</SelectItem>
@@ -253,13 +257,14 @@ export function DonacionesClient({
                                     </div>
                                     <div className="flex flex-col gap-2">
                                         <Label>Fecha de Donación</Label>
-                                        <Input type="date" />
+                                        <Input type="date" name="fecha" required defaultValue={new Date().toISOString().split('T')[0]} />
                                     </div>
                                     <div className="flex flex-col gap-2">
                                         <Label>Valor UMA Aplicado</Label>
                                         <Input
                                             type="number"
-                                            value={umaActual?.valor || 108.57}
+                                            name="valor_uma_aplicado"
+                                            value={umaActual?.valor || 117.31}
                                             readOnly
                                             className="bg-muted text-muted-foreground"
                                         />
@@ -267,13 +272,15 @@ export function DonacionesClient({
                                 </div>
                                 <div className="rounded-md border border-warning/40 bg-warning/5 p-3 text-xs text-muted-foreground">
                                     <span className="font-semibold text-foreground">Umbral PLD 2026:</span>{" "}
-                                    {formatMXN(645 * (umaActual?.valor || 108.57))} (645 UMAs × ${(umaActual?.valor || 108.57)})
+                                    {formatMXN(645 * (umaActual?.valor || 117.31))} (645 UMAs × ${(umaActual?.valor || 117.31)})
                                 </div>
                                 <div className="flex justify-end gap-2 pt-1">
-                                    <Button variant="outline" onClick={() => setIsNewOpen(false)}>Cancelar</Button>
-                                    <Button onClick={() => setIsNewOpen(false)}>Guardar Donación</Button>
+                                    <Button type="button" variant="outline" onClick={() => setIsNewOpen(false)} disabled={isPending}>Cancelar</Button>
+                                    <Button type="submit" disabled={isPending}>
+                                        {isPending ? "Guardando..." : "Guardar Donación"}
+                                    </Button>
                                 </div>
-                            </div>
+                            </form>
                         </DialogContent>
                     </Dialog>
                 </div>
@@ -468,8 +475,21 @@ export function DonacionesClient({
                                 <div className="flex justify-end gap-2">
                                     <Button variant="outline" onClick={() => setDetail(null)}>Cerrar</Button>
                                     {detail.requiere_reporte_pld && !detail.reportada_pld && (
-                                        <Button onClick={() => setDetail(null)}>
-                                            Marcar como Reportada (PLD)
+                                        <Button
+                                            disabled={isPending}
+                                            onClick={() => {
+                                                startTransition(async () => {
+                                                    const result = await markAsReportedPLD(detail.donacion_id)
+                                                    if (result.error) {
+                                                        toast.error(result.error)
+                                                    } else {
+                                                        toast.success("Marcada como reportada en PLD")
+                                                        setDetail(null)
+                                                    }
+                                                })
+                                            }}
+                                        >
+                                            {isPending ? "Guardando..." : "Marcar como Reportada (PLD)"}
                                         </Button>
                                     )}
                                 </div>

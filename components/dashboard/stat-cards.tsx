@@ -97,9 +97,15 @@ export function DonacionesKPI({ donaciones, umaActual }: { donaciones: Donacion[
     <div className="flex flex-col gap-3">
       <SectionHeader icon={TrendingUp} label="Donaciones" />
       <StatRow stats={[
+        {
+          label: "Valor UMA Diario",
+          value: formatMXN(umaActual?.valor || 117.31),
+          sub: `Año ${umaActual?.year || new Date().getFullYear()}`,
+          icon: Calculator,
+          color: "bg-muted text-muted-foreground"
+        },
         { label: "Total Recaudado", value: formatMXN(totalRecaudado), sub: `${donaciones.length} donaciones`, icon: TrendingUp, color: "bg-primary/10 text-primary" },
-        { label: "Requieren Reporte PLD", value: donacionesRequierenPLD.toString(), sub: `≥ 645 UMAs (${formatMXN(umbralPLD)})`, icon: FileWarning, color: "bg-warning/10 text-warning-foreground" },
-        { label: "Pendientes PLD", value: donacionesPendientesPLD.toString(), sub: "sin reportar a SHCP", icon: FileWarning, color: "bg-destructive/10 text-destructive" },
+        { label: "Requieren Reporte PLD", value: donacionesRequierenPLD.toString(), sub: `≥ 645 UMAs (${formatMXN(umbralPLD)})`, icon: FileWarning, color: "bg-destructive/10 text-destructive" },
         { label: "Reportadas SAT", value: donacionesReportadasSAT.toString(), sub: `${donaciones.length - donacionesReportadasSAT} pendientes`, icon: CircleCheck, color: "bg-success/10 text-success" },
       ]} />
     </div>
@@ -125,23 +131,6 @@ export function GastosKPI({ gastos }: { gastos: Gasto[] }) {
           icon: Receipt,
           color: "bg-muted text-muted-foreground",
         })),
-      ]} />
-    </div>
-  )
-}
-
-export function ConfiguracionKPI({ umaActual }: { umaActual?: { uma_id: number; year: number; valor: number } }) {
-  return (
-    <div className="flex flex-col gap-3">
-      <SectionHeader icon={Calculator} label="Configuración General" />
-      <StatRow stats={[
-        {
-          label: "Valor UMA Diario",
-          value: formatMXN(umaActual?.valor || 117.31),
-          sub: `Año ${umaActual?.year || new Date().getFullYear()}`,
-          icon: Calculator,
-          color: "bg-primary/10 text-primary"
-        }
       ]} />
     </div>
   )

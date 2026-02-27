@@ -1,5 +1,5 @@
 import { DashboardHeader } from "@/components/dashboard-header"
-import { DonantesKPI, DonacionesKPI, GastosKPI, ConfiguracionKPI } from "@/components/dashboard/stat-cards"
+import { DonantesKPI, DonacionesKPI, GastosKPI } from "@/components/dashboard/stat-cards"
 import { RiskChart } from "@/components/dashboard/risk-chart"
 import { ComplianceChart } from "@/components/dashboard/compliance-chart"
 import { ExpensesBreakdownChart } from "@/components/dashboard/expenses-breakdown-chart"
@@ -24,10 +24,7 @@ export default async function DashboardPage() {
       />
       <div className="flex flex-1 flex-col gap-8 p-4 lg:p-6">
 
-        {/* ── SECCIÓN CONFIGURACIÓN (UMA) ──────────────────────────────────── */}
-        <section className="flex flex-col gap-4">
-          <ConfiguracionKPI umaActual={umaActual} />
-        </section>
+
 
         {/* ── SECCIÓN DONANTES ─────────────────────────────────────────────── */}
         <section className="flex flex-col gap-4">
