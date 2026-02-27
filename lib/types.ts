@@ -41,7 +41,6 @@ export interface Donacion {
     reportada_pld: boolean
     fecha_reporte_pld?: string
     reportada_sat: boolean
-    uma_id: number
 }
 
 export interface Gasto {
@@ -90,10 +89,4 @@ export interface AlertaCumplimiento {
     created_at: string
     // Campo de UI (join con Donantes)
     donante_nombre?: string
-}
-
-export interface ConfiguracionUMA {
-    uma_id: number
-    year: number
-    valor: number
 }

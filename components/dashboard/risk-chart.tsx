@@ -10,29 +10,28 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts"
-import { mockDonaciones } from "@/lib/data"
+import type { Donacion } from "@/lib/types"
 
 const MONTH_LABELS = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
 
-function buildData() {
-  const fechas = mockDonaciones.map(d => new Date(d.fecha))
-  const maxDate = new Date(Math.max(...fechas.map(f => f.getTime())))
+export function RiskChart({ donaciones }: { donaciones: Donacion[] }) {
+  const fechas = donaciones.map(d => new Date(d.fecha))
+  const maxTime = Math.max(...fechas.map(f => f.getTime()))
+  // Handle empty state
+  const maxDate = fechas.length > 0 ? new Date(maxTime) : new Date()
 
-  return Array.from({ length: 6 }, (_, i) => {
+  const data = Array.from({ length: 6 }, (_, i) => {
     const d = new Date(maxDate.getFullYear(), maxDate.getMonth() - (5 - i), 1)
     const year = d.getFullYear()
     const month = d.getMonth()
 
-    const enMes = mockDonaciones.filter(don => {
+    const enMes = donaciones.filter(don => {
       const f = new Date(don.fecha)
       return f.getFullYear() === year && f.getMonth() === month
     })
 
-    // Donantes únicos en ese mes
     const donantesUnicos = new Set(enMes.map(don => don.donante_id)).size
-    // Reportes PLD generados (donaciones que requieren reporte)
     const reportesPLD = enMes.filter(don => don.requiere_reporte_pld).length
-    // Reportes ya enviados
     const reportesEnviados = enMes.filter(don => don.reportada_pld).length
 
     return {
@@ -42,11 +41,7 @@ function buildData() {
       reportesEnviados,
     }
   })
-}
 
-const data = buildData()
-
-export function RiskChart() {
   return (
     <Card className="col-span-1 lg:col-span-2">
       <CardHeader className="pb-2">

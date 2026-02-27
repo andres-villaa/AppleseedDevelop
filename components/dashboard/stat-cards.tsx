@@ -12,13 +12,9 @@ import {
   CircleCheck,
   Wallet,
   Receipt,
+  Calculator,
 } from "lucide-react"
-import {
-  mockDonantes,
-  mockDonaciones,
-  mockGastos,
-  umaActual,
-} from "@/lib/data"
+import type { Donante, Donacion, Gasto } from "@/lib/types"
 
 function formatMXN(amount: number) {
   return new Intl.NumberFormat("es-MX", {
@@ -27,26 +23,6 @@ function formatMXN(amount: number) {
     minimumFractionDigits: 0,
   }).format(amount)
 }
-
-// ─── Donantes ──────────────────────────────────────────────────────────────────
-const totalDonantes = mockDonantes.length
-const expedientesCompletos = mockDonantes.filter(d => d.estatus_expediente === "completo").length
-const expedientesIncompletos = mockDonantes.filter(d => d.estatus_expediente !== "completo").length
-const donantesPEP = mockDonantes.filter(d => d.es_pep).length
-
-// ─── Donaciones ────────────────────────────────────────────────────────────────
-const totalRecaudado = mockDonaciones.reduce((s, d) => s + d.monto, 0)
-const donacionesRequierenPLD = mockDonaciones.filter(d => d.requiere_reporte_pld).length
-const donacionesPendientesPLD = mockDonaciones.filter(d => d.requiere_reporte_pld && !d.reportada_pld).length
-const donacionesReportadasSAT = mockDonaciones.filter(d => d.reportada_sat).length
-const umbralPLD = 645 * umaActual.valor
-
-// ─── Gastos ────────────────────────────────────────────────────────────────────
-const totalGastado = mockGastos.reduce((s, g) => s + g.monto, 0)
-const gastosPorCategoria = [...new Set(mockGastos.map(g => g.categoria))].map(cat => ({
-  cat,
-  total: mockGastos.filter(g => g.categoria === cat).reduce((s, g) => s + g.monto, 0),
-})).sort((a, b) => b.total - a.total)
 
 // ─── Shared StatCard component ─────────────────────────────────────────────────
 
@@ -91,13 +67,18 @@ function SectionHeader({ icon: Icon, label }: { icon: React.ElementType; label: 
 
 // ─── Exported section components ──────────────────────────────────────────────
 
-export function DonantesKPI() {
+export function DonantesKPI({ donantes }: { donantes: Donante[] }) {
+  const totalDonantes = donantes.length
+  const expedientesCompletos = donantes.filter(d => d.estatus_expediente === "completo").length
+  const expedientesIncompletos = donantes.filter(d => d.estatus_expediente !== "completo").length
+  const donantesPEP = donantes.filter(d => d.es_pep).length
+
   return (
     <div className="flex flex-col gap-3">
       <SectionHeader icon={Users} label="Donantes" />
       <StatRow stats={[
         { label: "Total Donantes", value: totalDonantes.toString(), sub: "registrados", icon: Users, color: "bg-primary/10 text-primary" },
-        { label: "Expedientes Completos", value: expedientesCompletos.toString(), sub: `${Math.round((expedientesCompletos / totalDonantes) * 100)}% del total`, icon: UserCheck, color: "bg-success/10 text-success" },
+        { label: "Expedientes Completos", value: expedientesCompletos.toString(), sub: `${totalDonantes > 0 ? Math.round((expedientesCompletos / totalDonantes) * 100) : 0}% del total`, icon: UserCheck, color: "bg-success/10 text-success" },
         { label: "Expedientes Pendientes", value: expedientesIncompletos.toString(), sub: "incompletos o en revisión", icon: UserX, color: "bg-warning/10 text-warning-foreground" },
         { label: "Donantes PEP", value: donantesPEP.toString(), sub: "diligencia reforzada", icon: ShieldAlert, color: "bg-destructive/10 text-destructive" },
       ]} />
@@ -105,30 +86,42 @@ export function DonantesKPI() {
   )
 }
 
-export function DonacionesKPI() {
+export function DonacionesKPI({ donaciones, umaActual }: { donaciones: Donacion[], umaActual: { uma_id: number; year: number; valor: number } }) {
+  const totalRecaudado = donaciones.reduce((s, d) => s + Number(d.monto), 0)
+  const donacionesRequierenPLD = donaciones.filter(d => d.requiere_reporte_pld).length
+  const donacionesPendientesPLD = donaciones.filter(d => d.requiere_reporte_pld && !d.reportada_pld).length
+  const donacionesReportadasSAT = donaciones.filter(d => d.reportada_sat).length
+  const umbralPLD = 645 * (umaActual?.valor || 108.57)
+
   return (
     <div className="flex flex-col gap-3">
       <SectionHeader icon={TrendingUp} label="Donaciones" />
       <StatRow stats={[
-        { label: "Total Recaudado", value: formatMXN(totalRecaudado), sub: `${mockDonaciones.length} donaciones`, icon: TrendingUp, color: "bg-primary/10 text-primary" },
+        { label: "Total Recaudado", value: formatMXN(totalRecaudado), sub: `${donaciones.length} donaciones`, icon: TrendingUp, color: "bg-primary/10 text-primary" },
         { label: "Requieren Reporte PLD", value: donacionesRequierenPLD.toString(), sub: `≥ 645 UMAs (${formatMXN(umbralPLD)})`, icon: FileWarning, color: "bg-warning/10 text-warning-foreground" },
         { label: "Pendientes PLD", value: donacionesPendientesPLD.toString(), sub: "sin reportar a SHCP", icon: FileWarning, color: "bg-destructive/10 text-destructive" },
-        { label: "Reportadas SAT", value: donacionesReportadasSAT.toString(), sub: `${mockDonaciones.length - donacionesReportadasSAT} pendientes`, icon: CircleCheck, color: "bg-success/10 text-success" },
+        { label: "Reportadas SAT", value: donacionesReportadasSAT.toString(), sub: `${donaciones.length - donacionesReportadasSAT} pendientes`, icon: CircleCheck, color: "bg-success/10 text-success" },
       ]} />
     </div>
   )
 }
 
-export function GastosKPI() {
+export function GastosKPI({ gastos }: { gastos: Gasto[] }) {
+  const totalGastado = gastos.reduce((s, g) => s + Number(g.monto), 0)
+  const gastosPorCategoria = [...new Set(gastos.map(g => g.categoria))].map(cat => ({
+    cat,
+    total: gastos.filter(g => g.categoria === cat).reduce((s, g) => s + Number(g.monto), 0),
+  })).sort((a, b) => b.total - a.total)
+
   return (
     <div className="flex flex-col gap-3">
       <SectionHeader icon={Wallet} label="Gastos" />
       <StatRow stats={[
-        { label: "Total Gastado", value: formatMXN(totalGastado), sub: `${mockGastos.length} registros`, icon: Wallet, color: "bg-primary/10 text-primary" },
+        { label: "Total Gastado", value: formatMXN(totalGastado), sub: `${gastos.length} registros`, icon: Wallet, color: "bg-primary/10 text-primary" },
         ...gastosPorCategoria.slice(0, 3).map(({ cat, total }) => ({
           label: cat,
           value: formatMXN(total),
-          sub: `${mockGastos.filter(g => g.categoria === cat).length} registros`,
+          sub: `${gastos.filter(g => g.categoria === cat).length} registros`,
           icon: Receipt,
           color: "bg-muted text-muted-foreground",
         })),
@@ -137,14 +130,19 @@ export function GastosKPI() {
   )
 }
 
-// ─── Legacy full export (backwards compat) ────────────────────────────────────
-
-export function StatCards() {
+export function ConfiguracionKPI({ umaActual }: { umaActual?: { uma_id: number; year: number; valor: number } }) {
   return (
-    <div className="flex flex-col gap-5">
-      <DonantesKPI />
-      <DonacionesKPI />
-      <GastosKPI />
+    <div className="flex flex-col gap-3">
+      <SectionHeader icon={Calculator} label="Configuración General" />
+      <StatRow stats={[
+        {
+          label: "Valor UMA Diario",
+          value: formatMXN(umaActual?.valor || 117.31),
+          sub: `Año ${umaActual?.year || new Date().getFullYear()}`,
+          icon: Calculator,
+          color: "bg-primary/10 text-primary"
+        }
+      ]} />
     </div>
   )
 }

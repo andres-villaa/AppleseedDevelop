@@ -11,31 +11,13 @@ import {
     ResponsiveContainer,
     Cell,
 } from "recharts"
-import { mockDonantes } from "@/lib/data"
+import type { Donante } from "@/lib/types"
 
 function formatMXN(v: number) {
     if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`
     if (v >= 1_000) return `$${(v / 1_000).toFixed(0)}k`
     return `$${v}`
 }
-
-const data = [...mockDonantes]
-    .sort((a, b) => b.donacion_acumulada - a.donacion_acumulada)
-    .slice(0, 6)
-    .map((d, i) => ({
-        nombre: d.nombre_razon_social.length > 18
-            ? d.nombre_razon_social.slice(0, 18) + "…"
-            : d.nombre_razon_social,
-        monto: d.donacion_acumulada,
-        es_pep: d.es_pep,
-        color: i === 0
-            ? "var(--color-chart-1)"
-            : i === 1
-                ? "var(--color-chart-2)"
-                : i === 2
-                    ? "var(--color-chart-3)"
-                    : "var(--color-muted-foreground)",
-    }))
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -57,7 +39,25 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     )
 }
 
-export function TopDonorsChart() {
+export function TopDonorsChart({ donantes }: { donantes: Donante[] }) {
+    const data = [...donantes]
+        .sort((a, b) => Number(b.donacion_acumulada) - Number(a.donacion_acumulada))
+        .slice(0, 6)
+        .map((d, i) => ({
+            nombre: d.nombre_razon_social.length > 18
+                ? d.nombre_razon_social.slice(0, 18) + "…"
+                : d.nombre_razon_social,
+            monto: Number(d.donacion_acumulada),
+            es_pep: d.es_pep,
+            color: i === 0
+                ? "var(--color-chart-1)"
+                : i === 1
+                    ? "var(--color-chart-2)"
+                    : i === 2
+                        ? "var(--color-chart-3)"
+                        : "var(--color-muted-foreground)",
+        }))
+
     return (
         <Card className="col-span-1 lg:col-span-2">
             <CardHeader className="pb-2">
