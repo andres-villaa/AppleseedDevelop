@@ -1,6 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useTransition } from "react"
+import { useRouter } from "next/navigation"
+import { toast } from "sonner"
+import { addGasto } from "@/lib/supabase/actions"
 import { DashboardHeader } from "@/components/dashboard-header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -91,11 +94,45 @@ function getCategoriaBadgeClass(cat: string) {
 const ITEMS_PER_PAGE = 7
 
 export function GastosClient({ gastos }: { gastos: Gasto[] }) {
+    const router = useRouter()
+    const [isPending, startTransition] = useTransition()
+
     const [search, setSearch] = useState("")
     const [filterCat, setFilterCat] = useState("all")
     const [page, setPage] = useState(1)
     const [isNewOpen, setIsNewOpen] = useState(false)
     const [detail, setDetail] = useState<Gasto | null>(null)
+
+    // Form state
+    const emptyForm = { categoria: "", concepto: "", monto: "", rfc_proveedor: "", fecha: "" }
+    const [form, setForm] = useState(emptyForm)
+
+    function handleFormChange(field: string, value: string) {
+        setForm((prev) => ({ ...prev, [field]: value }))
+    }
+
+    function handleSaveGasto() {
+        startTransition(async () => {
+            const fd = new FormData()
+            fd.set("categoria", form.categoria)
+            fd.set("concepto", form.concepto)
+            fd.set("monto", form.monto)
+            fd.set("rfc_proveedor", form.rfc_proveedor)
+            fd.set("fecha", form.fecha)
+
+            const result = await addGasto(fd)
+
+            if (result.error) {
+                toast.error("Error al guardar el gasto", { description: result.error })
+            } else {
+                toast.success("Gasto registrado correctamente")
+                setIsNewOpen(false)
+                setForm(emptyForm)
+                router.refresh()
+            }
+        })
+    }
+
 
     const filtered = gastos.filter((g) => {
         const matchSearch =
@@ -196,35 +233,55 @@ export function GastosClient({ gastos }: { gastos: Gasto[] }) {
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="flex flex-col gap-2">
                                         <Label>Categoría</Label>
-                                        <Select>
+                                        <Select value={form.categoria} onValueChange={(v) => handleFormChange("categoria", v)}>
                                             <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
                                             <SelectContent>
                                                 {CATEGORIAS.map((cat) => (
-                                                    <SelectItem key={cat} value={cat.toLowerCase()}>{cat}</SelectItem>
+                                                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                                                 ))}
                                             </SelectContent>
                                         </Select>
                                     </div>
                                     <div className="flex flex-col gap-2">
                                         <Label>Monto (MXN)</Label>
-                                        <Input type="number" placeholder="Ej. 18500" />
+                                        <Input
+                                            type="number"
+                                            placeholder="Ej. 18500"
+                                            value={form.monto}
+                                            onChange={(e) => handleFormChange("monto", e.target.value)}
+                                        />
                                     </div>
                                     <div className="col-span-2 flex flex-col gap-2">
                                         <Label>Concepto / Descripción</Label>
-                                        <Input placeholder="Ej. Renta de oficina — Enero 2026" />
+                                        <Input
+                                            placeholder="Ej. Renta de oficina — Enero 2026"
+                                            value={form.concepto}
+                                            onChange={(e) => handleFormChange("concepto", e.target.value)}
+                                        />
                                     </div>
                                     <div className="flex flex-col gap-2">
                                         <Label>RFC del Proveedor</Label>
-                                        <Input placeholder="Ej. INMO800101XYZ" className="font-mono" />
+                                        <Input
+                                            placeholder="Ej. INMO800101XYZ"
+                                            className="font-mono"
+                                            value={form.rfc_proveedor}
+                                            onChange={(e) => handleFormChange("rfc_proveedor", e.target.value.toUpperCase())}
+                                        />
                                     </div>
                                     <div className="flex flex-col gap-2">
                                         <Label>Fecha del Gasto</Label>
-                                        <Input type="date" />
+                                        <Input
+                                            type="date"
+                                            value={form.fecha}
+                                            onChange={(e) => handleFormChange("fecha", e.target.value)}
+                                        />
                                     </div>
                                 </div>
                                 <div className="flex justify-end gap-2 pt-1">
-                                    <Button variant="outline" onClick={() => setIsNewOpen(false)}>Cancelar</Button>
-                                    <Button onClick={() => setIsNewOpen(false)}>Guardar Gasto</Button>
+                                    <Button variant="outline" onClick={() => { setIsNewOpen(false); setForm(emptyForm) }} disabled={isPending}>Cancelar</Button>
+                                    <Button onClick={handleSaveGasto} disabled={isPending}>
+                                        {isPending ? "Guardando..." : "Guardar Gasto"}
+                                    </Button>
                                 </div>
                             </div>
                         </DialogContent>

@@ -46,6 +46,43 @@ export async function addDonacion(formData: FormData) {
     return { success: true, data }
 }
 
+export async function addGasto(formData: FormData) {
+    const supabase = await createClient()
+
+    const categoria = formData.get("categoria") as string
+    const concepto = formData.get("concepto") as string
+    const monto = Number(formData.get("monto"))
+    const rfc_proveedor = formData.get("rfc_proveedor") as string
+    const fecha = formData.get("fecha") as string
+
+    if (!categoria || !concepto || !monto || !rfc_proveedor || !fecha) {
+        return { error: "Todos los campos son obligatorios" }
+    }
+
+    const { data, error } = await supabase
+        .from("Gastos")
+        .insert({
+            org_id: "11111111-1111-1111-1111-111111111111",
+            categoria,
+            concepto,
+            monto,
+            rfc_proveedor,
+            fecha,
+        })
+        .select()
+        .single()
+
+    if (error) {
+        console.error("Error inserting gasto:", error)
+        return { error: error.message }
+    }
+
+    revalidatePath("/gastos")
+    revalidatePath("/dashboard")
+
+    return { success: true, data }
+}
+
 export async function markAsReportedPLD(donacionId: number) {
     const supabase = await createClient()
 
