@@ -78,7 +78,7 @@ function getEstatusband(estatus: Donante["estatus_expediente"]) {
     }
 }
 
-export function RegistrosClient({ donantes }: { donantes: Donante[] }) {
+export function RegistrosClient({ donantes, headerActions }: { donantes: Donante[], headerActions?: React.ReactNode }) {
     const [search, setSearch] = useState("")
     const [filterEstatus, setFilterEstatus] = useState<string>("all")
     const [filterTipo, setFilterTipo] = useState<string>("all")
@@ -220,6 +220,7 @@ export function RegistrosClient({ donantes }: { donantes: Donante[] }) {
             <DashboardHeader
                 title="Donantes"
                 description="Gestión del expediente KYC de donantes registrados"
+                actions={headerActions}
             />
             <div className="flex flex-1 flex-col gap-4 p-4 lg:p-6">
 

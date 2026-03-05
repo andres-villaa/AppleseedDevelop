@@ -1,4 +1,4 @@
-import { DashboardHeader } from "@/components/dashboard-header"
+import { AppHeader } from "@/components/app-header"
 import { DonantesKPI, DonacionesKPI, GastosKPI } from "@/components/dashboard/stat-cards"
 import { RiskChart } from "@/components/dashboard/risk-chart"
 import { ComplianceChart } from "@/components/dashboard/compliance-chart"
@@ -18,7 +18,7 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <DashboardHeader
+      <AppHeader
         title="Panel General"
         description="Resumen de cumplimiento y actividad ALD"
       />

@@ -93,7 +93,7 @@ function getCategoriaBadgeClass(cat: string) {
 
 const ITEMS_PER_PAGE = 7
 
-export function GastosClient({ gastos }: { gastos: Gasto[] }) {
+export function GastosClient({ gastos, headerActions }: { gastos: Gasto[], headerActions?: React.ReactNode }) {
     const router = useRouter()
     const [isPending, startTransition] = useTransition()
 
@@ -160,6 +160,7 @@ export function GastosClient({ gastos }: { gastos: Gasto[] }) {
             <DashboardHeader
                 title="Gastos"
                 description="Registro de egresos de la organización con documentación fiscal"
+                actions={headerActions}
             />
             <div className="flex flex-1 flex-col gap-4 p-4 lg:p-6">
 
