@@ -69,10 +69,12 @@ function getVencimientoBadge(fecha: string) {
 
 export function DocumentosClient({
     docsOrg,
-    docsDonante
+    docsDonante,
+    headerActions
 }: {
     docsOrg: DocumentoOrgExt[];
-    docsDonante: DocumentoDonanteExt[]
+    docsDonante: DocumentoDonanteExt[];
+    headerActions?: React.ReactNode
 }) {
     const [search, setSearch] = useState("")
     const [filterTipoOrg, setFilterTipoOrg] = useState("all")
@@ -104,6 +106,7 @@ export function DocumentosClient({
             <DashboardHeader
                 title="Documentos"
                 description="Gestión documental de la organización y donantes"
+                actions={headerActions}
             />
             <div className="flex flex-1 flex-col gap-4 p-4 lg:p-6">
 

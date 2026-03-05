@@ -171,6 +171,20 @@ export async function updateDonanteEstatus(donanteId: string, estatus: "completo
 
     revalidatePath("/dashboard")
     revalidatePath("/registros")
+export async function markAlertaAtendida(alertaId: number) {
+    const supabase = await createClient()
+
+    const { error } = await supabase
+        .from("Alertas_Cumplimiento")
+        .update({ atendida: true })
+        .eq("alerta_id", alertaId)
+
+    if (error) {
+        console.error("Error marking alerta as atendida:", error)
+        return { error: error.message }
+    }
+
+    revalidatePath("/", "layout")
 
     return { success: true }
 }
