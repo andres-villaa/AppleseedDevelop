@@ -106,3 +106,52 @@ export async function markAsReportedPLD(donacionId: number) {
 
     return { success: true }
 }
+
+export async function addDonante(formData: FormData) {
+    const supabase = await createClient()
+
+    const nombre = formData.get("nombre") as string
+    const tipo_persona = formData.get("tipo_persona") as string
+    const rfc = formData.get("rfc") as string
+    const curp = formData.get("curp") as string
+    const email = formData.get("email") as string
+    const regimen_fiscal = formData.get("regimen_fiscal") as string
+    const codigo_postal = formData.get("codigo_postal") as string
+    const direccion = formData.get("direccion") as string
+    const actividad_economica = formData.get("actividad_economica") as string
+    const es_pep = formData.get("es_pep") === "on" || formData.get("es_pep") === "true"
+
+    if (!nombre || !tipo_persona || !rfc || !email || !regimen_fiscal || !codigo_postal) {
+        return { error: "Los campos básicos son obligatorios" }
+    }
+
+    const { data, error } = await supabase
+        .from("Donantes")
+        .insert({
+            org_id: "11111111-1111-1111-1111-111111111111", // Default to the seed Org ID for now
+            nombre_razon_social: nombre,
+            tipo_persona: tipo_persona as "fisica" | "moral",
+            rfc,
+            curp: curp || null,
+            email,
+            regimen_fiscal,
+            codigo_postal,
+            direccion,
+            actividad_economica,
+            es_pep,
+            estatus_expediente: "en_revision", // Default status for new donors
+            donacion_acumulada: 0
+        })
+        .select()
+        .single()
+
+    if (error) {
+        console.error("Error inserting donante:", error)
+        return { error: error.message }
+    }
+
+    revalidatePath("/dashboard")
+    revalidatePath("/registros")
+
+    return { success: true, data }
+}
