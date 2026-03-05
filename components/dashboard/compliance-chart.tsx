@@ -10,39 +10,10 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts"
-import { mockDonaciones } from "@/lib/data"
+import type { Donacion } from "@/lib/types"
 
 // Nombres cortos de mes en español
 const MONTH_LABELS = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
-
-// Agrupa donaciones por mes (últimos 6 meses desde la fecha más reciente)
-function buildMonthlyData() {
-  // Fecha de referencia: mes más reciente en los datos
-  const fechas = mockDonaciones.map(d => new Date(d.fecha))
-  const maxDate = new Date(Math.max(...fechas.map(f => f.getTime())))
-
-  // Generar los 6 meses hacia atrás
-  const months: { mes: string; monto: number; cantidad: number }[] = []
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date(maxDate.getFullYear(), maxDate.getMonth() - i, 1)
-    const year = d.getFullYear()
-    const month = d.getMonth() // 0-indexed
-
-    const enMes = mockDonaciones.filter(don => {
-      const f = new Date(don.fecha)
-      return f.getFullYear() === year && f.getMonth() === month
-    })
-
-    months.push({
-      mes: MONTH_LABELS[month],
-      monto: enMes.reduce((s, don) => s + don.monto, 0),
-      cantidad: enMes.length,
-    })
-  }
-  return months
-}
-
-const data = buildMonthlyData()
 
 function formatMXN(value: number) {
   if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`
@@ -50,7 +21,32 @@ function formatMXN(value: number) {
   return `$${value}`
 }
 
-export function ComplianceChart() {
+export function ComplianceChart({ donaciones }: { donaciones: Donacion[] }) {
+  // Agrupa donaciones por mes (últimos 6 meses desde la fecha más reciente)
+  const fechas = donaciones.map(d => new Date(d.fecha))
+  const maxTime = Math.max(...fechas.map(f => f.getTime()))
+  // Handle empty state
+  const maxDate = fechas.length > 0 ? new Date(maxTime) : new Date()
+
+  // Generar los 6 meses hacia atrás
+  const data: { mes: string; monto: number; cantidad: number }[] = []
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(maxDate.getFullYear(), maxDate.getMonth() - i, 1)
+    const year = d.getFullYear()
+    const month = d.getMonth() // 0-indexed
+
+    const enMes = donaciones.filter(don => {
+      const f = new Date(don.fecha)
+      return f.getFullYear() === year && f.getMonth() === month
+    })
+
+    data.push({
+      mes: MONTH_LABELS[month],
+      monto: enMes.reduce((s, don) => s + Number(don.monto), 0),
+      cantidad: enMes.length,
+    })
+  }
+
   return (
     <Card>
       <CardHeader className="pb-2">

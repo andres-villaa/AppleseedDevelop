@@ -34,6 +34,8 @@ export const viewport: Viewport = {
   userScalable: true,
 }
 
+import { Toaster } from "@/components/ui/sonner"
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -43,6 +45,7 @@ export default function RootLayout({
     <html lang="es">
       <body className={`${inter.variable} ${spaceMono.variable} font-sans antialiased`}>
         {children}
+        <Toaster />
         <Analytics />
       </body>
     </html>

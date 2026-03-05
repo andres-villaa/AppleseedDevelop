@@ -8,29 +8,11 @@ import {
     Tooltip,
     ResponsiveContainer,
 } from "recharts"
-import { mockDonantes } from "@/lib/data"
-
-const total = mockDonantes.length
-const completo = mockDonantes.filter(d => d.estatus_expediente === "completo").length
-const en_revision = mockDonantes.filter(d => d.estatus_expediente === "en_revision").length
-const incompleto = mockDonantes.filter(d => d.estatus_expediente === "incompleto").length
-const fisica = mockDonantes.filter(d => d.tipo_persona === "fisica").length
-const moral = mockDonantes.filter(d => d.tipo_persona === "moral").length
-
-const expedienteData = [
-    { name: "Completo", value: completo, color: "var(--color-chart-2)" },
-    { name: "En Revisión", value: en_revision, color: "var(--color-chart-3)" },
-    { name: "Incompleto", value: incompleto, color: "var(--color-chart-4)" },
-]
-
-const tipoData = [
-    { name: "Persona Moral", value: moral, color: "var(--color-chart-1)" },
-    { name: "Persona Física", value: fisica, color: "var(--color-chart-5)" },
-]
+import type { Donante } from "@/lib/types"
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const CustomTooltip = ({ active, payload, tot }: any) => {
-    if (!active || !payload?.length) return null
+    if (!active || !payload?.length || tot === 0) return null
     const d = payload[0]
     return (
         <div style={{
@@ -47,7 +29,25 @@ const CustomTooltip = ({ active, payload, tot }: any) => {
     )
 }
 
-export function DonorsStatusChart() {
+export function DonorsStatusChart({ donantes }: { donantes: Donante[] }) {
+    const total = donantes.length
+    const completo = donantes.filter(d => d.estatus_expediente === "completo").length
+    const en_revision = donantes.filter(d => d.estatus_expediente === "en_revision").length
+    const incompleto = donantes.filter(d => d.estatus_expediente === "incompleto").length
+    const fisica = donantes.filter(d => d.tipo_persona === "fisica").length
+    const moral = donantes.filter(d => d.tipo_persona === "moral").length
+
+    const expedienteData = [
+        { name: "Completo", value: completo, color: "var(--color-chart-2)" },
+        { name: "En Revisión", value: en_revision, color: "var(--color-chart-3)" },
+        { name: "Incompleto", value: incompleto, color: "var(--color-chart-4)" },
+    ]
+
+    const tipoData = [
+        { name: "Persona Moral", value: moral, color: "var(--color-chart-1)" },
+        { name: "Persona Física", value: fisica, color: "var(--color-chart-5)" },
+    ]
+
     return (
         <Card>
             <CardHeader className="pb-2">

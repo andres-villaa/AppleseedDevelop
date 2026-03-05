@@ -8,7 +8,7 @@ import {
     Tooltip,
     ResponsiveContainer,
 } from "recharts"
-import { mockGastos } from "@/lib/data"
+import type { Gasto } from "@/lib/types"
 
 const COLORS = [
     "var(--color-chart-1)",
@@ -18,25 +18,13 @@ const COLORS = [
     "var(--color-chart-5)",
 ]
 
-function buildData() {
-    const cats = [...new Set(mockGastos.map(g => g.categoria))]
-    return cats.map((cat, i) => ({
-        name: cat,
-        value: mockGastos.filter(g => g.categoria === cat).reduce((s, g) => s + g.monto, 0),
-        color: COLORS[i % COLORS.length],
-    })).sort((a, b) => b.value - a.value)
-}
-
-const data = buildData()
-const total = data.reduce((s, d) => s + d.value, 0)
-
 function formatMXN(v: number) {
     return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 0 }).format(v)
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const CustomTooltip = ({ active, payload }: any) => {
-    if (!active || !payload?.length) return null
+const CustomTooltip = ({ active, payload, tot }: any) => {
+    if (!active || !payload?.length || tot === 0) return null
     const d = payload[0]
     return (
         <div style={{
@@ -49,12 +37,21 @@ const CustomTooltip = ({ active, payload }: any) => {
         }}>
             <p className="font-semibold">{d.name}</p>
             <p>{formatMXN(d.value)}</p>
-            <p className="text-muted-foreground">{((d.value / total) * 100).toFixed(1)}% del total</p>
+            <p className="text-muted-foreground">{((d.value / tot) * 100).toFixed(1)}% del total</p>
         </div>
     )
 }
 
-export function ExpensesBreakdownChart() {
+export function ExpensesBreakdownChart({ gastos }: { gastos: Gasto[] }) {
+    const cats = [...new Set(gastos.map(g => g.categoria))]
+    const data = cats.map((cat, i) => ({
+        name: cat,
+        value: gastos.filter(g => g.categoria === cat).reduce((s, g) => s + Number(g.monto), 0),
+        color: COLORS[i % COLORS.length],
+    })).sort((a, b) => b.value - a.value)
+
+    const total = data.reduce((s, d) => s + d.value, 0)
+
     return (
         <Card>
             <CardHeader className="pb-2">
@@ -78,7 +75,7 @@ export function ExpensesBreakdownChart() {
                                     <Cell key={i} fill={entry.color} stroke="transparent" />
                                 ))}
                             </Pie>
-                            <Tooltip content={<CustomTooltip />} />
+                            <Tooltip content={<CustomTooltip tot={total} />} />
                         </PieChart>
                     </ResponsiveContainer>
                 </div>
@@ -91,7 +88,7 @@ export function ExpensesBreakdownChart() {
                             </div>
                             <div className="flex items-center gap-2">
                                 <span className="font-medium">{formatMXN(d.value)}</span>
-                                <span className="text-muted-foreground w-10 text-right">{((d.value / total) * 100).toFixed(0)}%</span>
+                                <span className="text-muted-foreground w-10 text-right">{total > 0 ? ((d.value / total) * 100).toFixed(0) : "0"}%</span>
                             </div>
                         </div>
                     ))}

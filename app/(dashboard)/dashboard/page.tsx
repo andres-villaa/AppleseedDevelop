@@ -1,4 +1,4 @@
-import { DashboardHeader } from "@/components/dashboard-header"
+import { AppHeader } from "@/components/app-header"
 import { DonantesKPI, DonacionesKPI, GastosKPI } from "@/components/dashboard/stat-cards"
 import { RiskChart } from "@/components/dashboard/risk-chart"
 import { ComplianceChart } from "@/components/dashboard/compliance-chart"
@@ -6,43 +6,53 @@ import { ExpensesBreakdownChart } from "@/components/dashboard/expenses-breakdow
 import { DonorsStatusChart } from "@/components/dashboard/donors-status-chart"
 import { TopDonorsChart } from "@/components/dashboard/top-donors-chart"
 import { ActivityChart } from "@/components/dashboard/activity-chart"
+import { getDonantes, getDonaciones, getGastos, getUMAActual } from "@/lib/supabase/queries"
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const [donantes, donaciones, gastos, umaActual] = await Promise.all([
+    getDonantes(),
+    getDonaciones(),
+    getGastos(),
+    getUMAActual()
+  ])
+
   return (
     <>
-      <DashboardHeader
+      <AppHeader
         title="Panel General"
         description="Resumen de cumplimiento y actividad ALD"
       />
       <div className="flex flex-1 flex-col gap-8 p-4 lg:p-6">
 
+
+
         {/* ── SECCIÓN DONANTES ─────────────────────────────────────────────── */}
         <section className="flex flex-col gap-4">
-          <DonantesKPI />
+          <DonantesKPI donantes={donantes} />
           {/* Gráficas de Donantes */}
           <div className="grid gap-4 lg:grid-cols-3">
-            <TopDonorsChart />   {/* col-span-2 */}
-            <DonorsStatusChart />
+            <TopDonorsChart donantes={donantes} />   {/* col-span-2 */}
+            <DonorsStatusChart donantes={donantes} />
           </div>
         </section>
 
         {/* ── SECCIÓN DONACIONES ───────────────────────────────────────────── */}
         <section className="flex flex-col gap-4">
-          <DonacionesKPI />
+          <DonacionesKPI donaciones={donaciones} umaActual={umaActual} />
           {/* Gráficas de Donaciones */}
           <div className="grid gap-4 lg:grid-cols-3">
-            <RiskChart />        {/* col-span-2 */}
-            <ComplianceChart />
+            <RiskChart donaciones={donaciones} />        {/* col-span-2 */}
+            <ComplianceChart donaciones={donaciones} />
           </div>
         </section>
 
         {/* ── SECCIÓN GASTOS + ACTIVIDAD ───────────────────────────────────── */}
         <section className="flex flex-col gap-4">
-          <GastosKPI />
+          <GastosKPI gastos={gastos} />
           {/* Gráficas de Gastos y Actividad del sistema */}
           <div className="grid gap-4 lg:grid-cols-3">
-            <ActivityChart />    {/* col-span-2 */}
-            <ExpensesBreakdownChart />
+            <ActivityChart />    {/* col-span-2 -> We'll leave it as is if it doesn't need DB data, or update later */}
+            <ExpensesBreakdownChart gastos={gastos} />
           </div>
         </section>
 
