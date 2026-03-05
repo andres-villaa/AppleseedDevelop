@@ -74,7 +74,7 @@ function getEstatusband(estatus: Donante["estatus_expediente"]) {
     }
 }
 
-export function RegistrosClient({ donantes }: { donantes: Donante[] }) {
+export function RegistrosClient({ donantes, headerActions }: { donantes: Donante[], headerActions?: React.ReactNode }) {
     const [search, setSearch] = useState("")
     const [filterEstatus, setFilterEstatus] = useState<string>("all")
     const [filterTipo, setFilterTipo] = useState<string>("all")
@@ -102,6 +102,7 @@ export function RegistrosClient({ donantes }: { donantes: Donante[] }) {
             <DashboardHeader
                 title="Donantes"
                 description="Gestión del expediente KYC de donantes registrados"
+                actions={headerActions}
             />
             <div className="flex flex-1 flex-col gap-4 p-4 lg:p-6">
 
@@ -319,7 +320,7 @@ export function RegistrosClient({ donantes }: { donantes: Donante[] }) {
                                             </div>
                                         </TableCell>
                                         <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
-                                            {donante.tipo_persona === "Física" || donante.tipo_persona === "fisica" ? "Persona Física" : "Persona Moral"}
+                                            {donante.tipo_persona === "fisica" ? "Persona Física" : "Persona Moral"}
                                         </TableCell>
                                         <TableCell className="hidden lg:table-cell font-mono text-xs text-muted-foreground">
                                             {donante.rfc}
@@ -373,7 +374,7 @@ export function RegistrosClient({ donantes }: { donantes: Donante[] }) {
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <p className="text-xs text-muted-foreground">Tipo</p>
-                                        <p className="text-sm font-medium">{detailDonante.tipo_persona === "Física" || detailDonante.tipo_persona === "fisica" ? "Persona Física" : "Persona Moral"}</p>
+                                        <p className="text-sm font-medium">{detailDonante.tipo_persona === "fisica" ? "Persona Física" : "Persona Moral"}</p>
                                     </div>
                                     <div>
                                         <p className="text-xs text-muted-foreground">RFC</p>
