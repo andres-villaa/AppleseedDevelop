@@ -1,6 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { createClient } from "@/lib/supabase/client"
+import { updateOrganizacion } from "@/lib/supabase/actions"
+import { toast } from "sonner"
 import { DashboardHeader } from "@/components/dashboard-header"
 import {
     Card,
@@ -55,30 +58,90 @@ const stats = [
 
 export default function PerfilPage() {
     const [editMode, setEditMode] = useState(false)
-    const [saved, setSaved] = useState(false)
+    const [isLoading, setIsLoading] = useState(true)
+    const [isSaving, setIsSaving] = useState(false)
 
     // Datos de la organizacion
     const [orgForm, setOrgForm] = useState({
-        nombre: "Fundacion Esperanza A.C.",
-        tipo: "asociacion_civil",
-        rfc: "FES200301ABC",
-        cluni: "FESE200301ABC123",
-        fechaConstitucion: "2020-03-01",
-        mision: "Promovemos el desarrollo comunitario sustentable a traves de programas de educacion, salud y medio ambiente en comunidades vulnerables del sur de Mexico.",
-        sitioWeb: "www.fundacionesperanza.org",
-        estado: "Oaxaca",
-        municipio: "Oaxaca de Juarez",
-        sector: "desarrollo_comunitario",
+        nombre: "",
+        tipo: "",
+        rfc: "",
+        cluni: "",
+        fechaConstitucion: "",
+        mision: "",
+        sitioWeb: "",
+        estado: "",
+        municipio: "",
+        sector: "",
     })
+
+    useEffect(() => {
+        async function loadProfile() {
+            try {
+                const supabase = createClient()
+                const { data: { user } } = await supabase.auth.getUser()
+
+                if (!user) {
+                    setIsLoading(false)
+                    return
+                }
+
+                const { data, error } = await supabase
+                    .from('Organizaciones')
+                    .select('*')
+                    .eq('org_id', user.id)
+                    .single()
+
+                if (error) throw error
+
+                if (data) {
+                    setOrgForm({
+                        nombre: data.nombre || "",
+                        tipo: data.tipo_figura_juridica || "",
+                        rfc: data.rfc || "",
+                        cluni: data.cluni || "",
+                        fechaConstitucion: data.fecha_constitucion || "",
+                        mision: data.mision || "",
+                        sitioWeb: data.sitio_web || "",
+                        estado: data.estado || "",
+                        municipio: data.municipio || "",
+                        sector: data.sector_causa || "",
+                    })
+                }
+            } catch (error) {
+                console.error("Error cargando el perfil", error)
+                toast.error("Ocurrió un error al cargar la información")
+            } finally {
+                setIsLoading(false)
+            }
+        }
+        loadProfile()
+    }, [])
 
     function handleOrgChange(field: string, value: string) {
         setOrgForm((prev) => ({ ...prev, [field]: value }))
     }
 
-    function handleSave() {
-        setEditMode(false)
-        setSaved(true)
-        setTimeout(() => setSaved(false), 3000)
+    async function handleSave() {
+        setIsSaving(true)
+        const formData = new FormData()
+        Object.entries(orgForm).forEach(([key, value]) => {
+            formData.append(key, value)
+        })
+
+        try {
+            const result = await updateOrganizacion(formData)
+            if (result?.error) {
+                toast.error(result.error)
+            } else {
+                toast.success("Información actualizada correctamente")
+                setEditMode(false)
+            }
+        } catch (error) {
+            toast.error("Ocurrió un error inesperado")
+        } finally {
+            setIsSaving(false)
+        }
     }
 
     return (
@@ -142,18 +205,19 @@ export default function PerfilPage() {
                                     size="sm"
                                     className="shrink-0 gap-2"
                                     onClick={() => setEditMode(true)}
+                                    disabled={isLoading}
                                 >
                                     <Edit2 className="size-3.5" />
                                     Editar
                                 </Button>
                             ) : (
                                 <div className="flex gap-2 shrink-0">
-                                    <Button variant="outline" size="sm" onClick={() => setEditMode(false)}>
+                                    <Button variant="outline" size="sm" onClick={() => setEditMode(false)} disabled={isSaving}>
                                         Cancelar
                                     </Button>
-                                    <Button size="sm" className="gap-2" onClick={handleSave}>
+                                    <Button size="sm" className="gap-2" onClick={handleSave} disabled={isSaving}>
                                         <Save className="size-3.5" />
-                                        Guardar
+                                        {isSaving ? "Guardando..." : "Guardar"}
                                     </Button>
                                 </div>
                             )}
@@ -164,13 +228,6 @@ export default function PerfilPage() {
                             <p className="text-xs font-medium text-muted-foreground mb-1">Mision</p>
                             <p className="text-sm text-foreground leading-relaxed">{orgForm.mision}</p>
                         </div>
-
-                        {saved && (
-                            <div className="mt-4 flex items-center gap-2 rounded-md bg-success/10 px-3 py-2 text-xs text-success">
-                                <CheckCircle className="size-3.5" />
-                                Informacion actualizada correctamente
-                            </div>
-                        )}
                     </CardContent>
                 </Card>
 
@@ -428,7 +485,7 @@ export default function PerfilPage() {
 
 
                 </Tabs>
-            </div>
+            </div >
         </>
     )
 }

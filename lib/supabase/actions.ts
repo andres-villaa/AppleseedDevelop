@@ -331,3 +331,53 @@ export async function signIn(formData: FormData) {
     revalidatePath("/dashboard")
     return { success: true }
 }
+
+export async function updateOrganizacion(formData: FormData) {
+    const supabase = await createClient()
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: "No autenticado" }
+
+    const nombre = formData.get("nombre") as string
+    const rfc = formData.get("rfc") as string
+    const cluni = formData.get("cluni") as string
+    const tipo_figura_juridica = formData.get("tipo") as string
+    const sector_causa = formData.get("sector") as string
+    const fecha_constitucion = formData.get("fechaConstitucion") as string
+    const sitio_web = formData.get("sitioWeb") as string
+    const estado = formData.get("estado") as string
+    const municipio = formData.get("municipio") as string
+    const mision = formData.get("mision") as string
+
+    if (!nombre) {
+        return { error: "El nombre es obligatorio" }
+    }
+
+    const { data, error } = await supabase
+        .from("Organizaciones")
+        .update({
+            nombre,
+            rfc: rfc || null,
+            cluni: cluni || null,
+            tipo_figura_juridica: tipo_figura_juridica || null,
+            sector_causa: sector_causa || null,
+            fecha_constitucion: fecha_constitucion || null,
+            sitio_web: sitio_web || null,
+            estado: estado || null,
+            municipio: municipio || null,
+            mision: mision || null,
+        })
+        .eq("org_id", user.id)
+        .select()
+        .single()
+
+    if (error) {
+        console.error("Error updating organizacion:", error)
+        return { error: error.message }
+    }
+
+    revalidatePath("/dashboard")
+    revalidatePath("/perfil")
+
+    return { success: true, data }
+}
