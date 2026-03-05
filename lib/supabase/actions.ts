@@ -6,6 +6,9 @@ import { createClient } from "./server"
 export async function addDonacion(formData: FormData) {
     const supabase = await createClient()
 
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: "No autenticado" }
+
     const donante_id = formData.get("donante_id") as string
     const monto = Number(formData.get("monto"))
     const metodo_pago = formData.get("metodo_pago") as string
@@ -22,7 +25,7 @@ export async function addDonacion(formData: FormData) {
     const { data, error } = await supabase
         .from("Donaciones")
         .insert({
-            org_id: "11111111-1111-1111-1111-111111111111", // Default to the seed Org ID for now
+            org_id: user.id,
             donante_id,
             monto,
             metodo_pago,
@@ -49,6 +52,9 @@ export async function addDonacion(formData: FormData) {
 export async function addGasto(formData: FormData) {
     const supabase = await createClient()
 
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: "No autenticado" }
+
     const categoria = formData.get("categoria") as string
     const concepto = formData.get("concepto") as string
     const monto = Number(formData.get("monto"))
@@ -62,7 +68,7 @@ export async function addGasto(formData: FormData) {
     const { data, error } = await supabase
         .from("Gastos")
         .insert({
-            org_id: "11111111-1111-1111-1111-111111111111",
+            org_id: user.id,
             categoria,
             concepto,
             monto,
@@ -86,6 +92,9 @@ export async function addGasto(formData: FormData) {
 export async function markAsReportedPLD(donacionId: number) {
     const supabase = await createClient()
 
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: "No autenticado" }
+
     const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD
 
     const { error } = await supabase
@@ -95,6 +104,7 @@ export async function markAsReportedPLD(donacionId: number) {
             fecha_reporte_pld: today
         })
         .eq("donacion_id", donacionId)
+        .eq("org_id", user.id)
 
     if (error) {
         console.error("Error updating donacion:", error)
@@ -109,6 +119,9 @@ export async function markAsReportedPLD(donacionId: number) {
 
 export async function addDonante(formData: FormData) {
     const supabase = await createClient()
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: "No autenticado" }
 
     const nombre = formData.get("nombre") as string
     const tipo_persona = formData.get("tipo_persona") as string
@@ -128,7 +141,7 @@ export async function addDonante(formData: FormData) {
     const { data, error } = await supabase
         .from("Donantes")
         .insert({
-            org_id: "11111111-1111-1111-1111-111111111111", // Default to the seed Org ID for now
+            org_id: user.id,
             nombre_razon_social: nombre,
             tipo_persona: tipo_persona as "fisica" | "moral",
             rfc,
@@ -159,10 +172,14 @@ export async function addDonante(formData: FormData) {
 export async function updateDonanteEstatus(donanteId: string, estatus: "completo" | "incompleto" | "en_revision") {
     const supabase = await createClient()
 
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: "No autenticado" }
+
     const { error } = await supabase
         .from("Donantes")
         .update({ estatus_expediente: estatus })
         .eq("donante_id", donanteId)
+        .eq("org_id", user.id)
 
     if (error) {
         console.error("Error updating donante status:", error)
@@ -177,6 +194,9 @@ export async function updateDonanteEstatus(donanteId: string, estatus: "completo
 
 export async function updateDonante(formData: FormData) {
     const supabase = await createClient()
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: "No autenticado" }
 
     const donante_id = formData.get("donante_id") as string
     const nombre = formData.get("nombre") as string
@@ -209,6 +229,7 @@ export async function updateDonante(formData: FormData) {
             es_pep
         })
         .eq("donante_id", donante_id)
+        .eq("org_id", user.id)
         .select()
         .single()
 
