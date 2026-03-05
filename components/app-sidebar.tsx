@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
@@ -36,6 +37,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { signOut } from "@/lib/supabase/actions"
+import { toast } from "sonner"
+import { createClient } from "@/lib/supabase/client"
+import { useRouter } from "next/navigation"
 
 const mainNav = [
   {
@@ -76,6 +81,56 @@ const secondaryNav = [
 
 export function AppSidebar() {
   const pathname = usePathname()
+  const router = useRouter()
+
+  const [userName, setUserName] = useState("Cargando...")
+  const [userEmail, setUserEmail] = useState("cargando@org.com")
+  const [userInitials, setUserInitials] = useState("...")
+
+  useEffect(() => {
+    async function loadUser() {
+      try {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+
+        if (user) {
+          setUserEmail(user.email || "Usuario")
+
+          const { data, error } = await supabase
+            .from('Organizaciones')
+            .select('nombre')
+            .eq('org_id', user.id)
+            .single()
+
+          if (!error && data) {
+            setUserName(data.nombre || "Organización")
+
+            // Generate initials assuming it's the org name
+            if (data.nombre) {
+              const words = data.nombre.split(' ')
+              setUserInitials(
+                (words.length > 1 ? words[0][0] + words[1][0] : words[0].substring(0, 2)).toUpperCase()
+              )
+            }
+          }
+        }
+      } catch (error) {
+        setUserName("Usuario de Appleseed")
+        setUserInitials("UA")
+      }
+    }
+    loadUser()
+  }, [])
+
+  async function handleSignOut() {
+    try {
+      await signOut()
+      router.push("/login")
+      toast.success("Sesión cerrada")
+    } catch (error) {
+      toast.error("Error al cerrar sesión")
+    }
+  }
 
   return (
     <Sidebar>
@@ -161,13 +216,13 @@ export function AppSidebar() {
             <button className="flex w-full items-center gap-3 rounded-md p-2 text-left text-sm text-sidebar-foreground hover:bg-sidebar-accent transition-colors">
               <Avatar className="size-8">
                 <AvatarFallback className="bg-sidebar-accent text-sidebar-accent-foreground text-xs">
-                  MA
+                  {userInitials}
                 </AvatarFallback>
               </Avatar>
-              <div className="flex flex-1 flex-col">
-                <span className="text-xs font-medium">Maria Alvarez</span>
-                <span className="text-[11px] text-sidebar-foreground/60">
-                  Fundacion Esperanza A.C.
+              <div className="flex flex-1 flex-col overflow-hidden">
+                <span className="text-xs font-medium truncate">{userName}</span>
+                <span className="text-[11px] text-sidebar-foreground/60 truncate">
+                  {userEmail}
                 </span>
               </div>
               <ChevronDown className="size-4 text-sidebar-foreground/40" />
@@ -180,7 +235,7 @@ export function AppSidebar() {
                 Mi Perfil
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem className="text-destructive">
+            <DropdownMenuItem className="text-destructive cursor-pointer" onClick={handleSignOut}>
               <LogOut className="mr-2 size-4" />
               Cerrar Sesion
             </DropdownMenuItem>

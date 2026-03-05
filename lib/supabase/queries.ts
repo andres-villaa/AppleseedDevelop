@@ -13,11 +13,36 @@ import type {
  * de una petición del servidor (Server Component, Route Handler, Server Action).
  */
 
+export async function getOrganizacion() {
+    const supabase = await createClient()
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return null
+
+    const { data, error } = await supabase
+        .from('Organizaciones')
+        .select('*')
+        .eq('org_id', user.id)
+        .single()
+
+    if (error) {
+        console.error('Error fetching org profile:', error)
+        return null
+    }
+
+    return data
+}
+
 export async function getDonantes(): Promise<Donante[]> {
     const supabase = await createClient()
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return []
+
     const { data, error } = await supabase
         .from('Donantes')
         .select('*')
+        .eq('org_id', user.id)
         .order('created_at', { ascending: false })
 
     if (error) {
@@ -30,6 +55,9 @@ export async function getDonantes(): Promise<Donante[]> {
 export async function getDonaciones(): Promise<(Donacion & { nombre_donante?: string })[]> {
     const supabase = await createClient()
 
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return []
+
     // Hacemos un join con Donantes para obtener el nombre
     const { data, error } = await supabase
         .from('Donaciones')
@@ -39,6 +67,7 @@ export async function getDonaciones(): Promise<(Donacion & { nombre_donante?: st
                 nombre_razon_social
             )
         `)
+        .eq('org_id', user.id)
         .order('fecha', { ascending: false })
 
     if (error) {
@@ -55,9 +84,14 @@ export async function getDonaciones(): Promise<(Donacion & { nombre_donante?: st
 
 export async function getGastos(): Promise<Gasto[]> {
     const supabase = await createClient()
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return []
+
     const { data, error } = await supabase
         .from('Gastos')
         .select('*')
+        .eq('org_id', user.id)
         .order('fecha', { ascending: false })
 
     if (error) {
@@ -69,9 +103,14 @@ export async function getGastos(): Promise<Gasto[]> {
 
 export async function getAlertas(): Promise<AlertaCumplimiento[]> {
     const supabase = await createClient()
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return []
+
     const { data, error } = await supabase
         .from('Alertas_Cumplimiento')
         .select('*')
+        .eq('organizacion_id', user.id)
         .order('created_at', { ascending: false })
 
     if (error) {
@@ -111,9 +150,14 @@ export async function getUMAActual(): Promise<{ uma_id: number; year: number; va
 
 export async function getDocumentosOrg(): Promise<DocumentoOrg[]> {
     const supabase = await createClient()
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return []
+
     const { data, error } = await supabase
         .from('Documentos_Org')
         .select('*')
+        .eq('org_id', user.id)
         .order('fecha_subida', { ascending: false })
 
     if (error) {
@@ -125,6 +169,10 @@ export async function getDocumentosOrg(): Promise<DocumentoOrg[]> {
 
 export async function getDocumentosDonantes(): Promise<(DocumentoDonante & { nombre_donante?: string })[]> {
     const supabase = await createClient()
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return []
+
     const { data, error } = await supabase
         .from('Documentos_Donantes')
         .select(`
@@ -133,6 +181,7 @@ export async function getDocumentosDonantes(): Promise<(DocumentoDonante & { nom
                 nombre_razon_social
             )
         `)
+        .eq('org_id', user.id)
         .order('fecha_subida', { ascending: false })
 
     if (error) {
