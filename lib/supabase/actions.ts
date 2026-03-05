@@ -222,3 +222,91 @@ export async function updateDonante(formData: FormData) {
 
     return { success: true, data }
 }
+
+export async function registerOrganizacion(formData: FormData) {
+    const supabase = await createClient()
+
+    const nombre = formData.get("nombre") as string
+    const razon_social = formData.get("razon_social") as string
+    const rfc = formData.get("rfc") as string
+    const cluni = formData.get("cluni") as string
+    const email = formData.get("email") as string
+    const contrasena = formData.get("contrasena") as string
+
+    if (!nombre || !razon_social || !rfc || !email || !contrasena) {
+        return { error: "Los campos basicos son obligatorios" }
+    }
+
+    // Attempt to register with Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password: contrasena,
+        options: {
+            data: {
+                nombre_organizacion: nombre,
+                rfc
+            }
+        }
+    })
+
+    if (authError) {
+        console.error("Error signing up user:", authError)
+        return { error: authError.message }
+    }
+
+    const orgId = authData.user?.id
+
+    if (!orgId) {
+        return { error: "No se pudo crear el usuario en el sistema de autenticacion." }
+    }
+
+    // Insert into Organizaciones table (using the auth user id if possible)
+    const { error: dbError } = await supabase
+        .from("Organizaciones")
+        .insert({
+            org_id: orgId,
+            nombre,
+            razon_social,
+            rfc,
+            cluni: cluni || null,
+            email,
+            contrasena
+        })
+
+    if (dbError) {
+        console.error("Error inserting organizacion:", dbError)
+        return { error: dbError.message }
+    }
+
+    return { success: true }
+}
+
+export async function signOut() {
+    const supabase = await createClient()
+    await supabase.auth.signOut()
+    revalidatePath("/", "layout")
+}
+
+export async function signIn(formData: FormData) {
+    const supabase = await createClient()
+
+    const email = formData.get("email") as string
+    const contrasena = formData.get("contrasena") as string
+
+    if (!email || !contrasena) {
+        return { error: "Correo electrónico y contraseña son obligatorios" }
+    }
+
+    const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password: contrasena,
+    })
+
+    if (error) {
+        console.error("Error signing in:", error)
+        return { error: "Credenciales inválidas" }
+    }
+
+    revalidatePath("/dashboard")
+    return { success: true }
+}

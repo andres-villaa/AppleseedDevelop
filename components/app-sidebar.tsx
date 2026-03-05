@@ -36,6 +36,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { signOut } from "@/lib/supabase/actions"
+import { toast } from "sonner"
+import { useRouter } from "next/navigation"
 
 const mainNav = [
   {
@@ -76,6 +79,17 @@ const secondaryNav = [
 
 export function AppSidebar() {
   const pathname = usePathname()
+  const router = useRouter()
+
+  async function handleSignOut() {
+    try {
+      await signOut()
+      router.push("/login")
+      toast.success("Sesión cerrada")
+    } catch (error) {
+      toast.error("Error al cerrar sesión")
+    }
+  }
 
   return (
     <Sidebar>
@@ -180,7 +194,7 @@ export function AppSidebar() {
                 Mi Perfil
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem className="text-destructive">
+            <DropdownMenuItem className="text-destructive cursor-pointer" onClick={handleSignOut}>
               <LogOut className="mr-2 size-4" />
               Cerrar Sesion
             </DropdownMenuItem>
