@@ -188,6 +188,10 @@ export async function updateDonanteEstatus(donanteId: string, estatus: "completo
 
     revalidatePath("/dashboard")
     revalidatePath("/registros")
+
+    return { success: true }
+}
+
 export async function markAlertaAtendida(alertaId: number) {
     const supabase = await createClient()
 
