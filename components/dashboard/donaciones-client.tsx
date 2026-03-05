@@ -83,11 +83,13 @@ const ITEMS_PER_PAGE = 7
 export function DonacionesClient({
     donaciones,
     donantes,
-    umaActual
+    umaActual,
+    headerActions
 }: {
     donaciones: DonacionExtendida[];
     donantes: Donante[];
-    umaActual: { uma_id: number; year: number; valor: number }
+    umaActual: { uma_id: number; year: number; valor: number };
+    headerActions?: React.ReactNode
 }) {
     const [search, setSearch] = useState("")
     const [filterMetodo, setFilterMetodo] = useState("all")
@@ -114,8 +116,8 @@ export function DonacionesClient({
     const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE)
 
     const totalRecaudado = donaciones.reduce((s, d) => s + Number(d.monto), 0)
+    const reportadasPLD = donaciones.filter((d) => d.reportada_pld).length
     const pendientesPLD = donaciones.filter((d) => d.requiere_reporte_pld && !d.reportada_pld).length
-    const pendientesSAT = donaciones.filter((d) => !d.reportada_sat).length
     const totalRequierenReporte = donaciones.filter((d) => d.requiere_reporte_pld).length
 
     return (
@@ -123,6 +125,7 @@ export function DonacionesClient({
             <DashboardHeader
                 title="Donaciones"
                 description="Registro y seguimiento de donaciones recibidas — Control PLD y SAT"
+                actions={headerActions}
             />
             <div className="flex flex-1 flex-col gap-4 p-4 lg:p-6">
 
@@ -153,10 +156,10 @@ export function DonacionesClient({
                         <CardContent className="p-4">
                             <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
                                 <CircleCheck className="size-3.5" />
-                                Reportadas SAT
+                                Reportadas PLD
                             </div>
-                            <p className="text-xl font-bold">{donaciones.filter(d => d.reportada_sat).length}</p>
-                            <p className="text-[11px] text-muted-foreground mt-1">{pendientesSAT} pendientes</p>
+                            <p className="text-xl font-bold">{reportadasPLD}</p>
+                            <p className="text-[11px] text-muted-foreground mt-1">{pendientesPLD} pendientes de reporte</p>
                         </CardContent>
                     </Card>
                 </div>
@@ -324,7 +327,6 @@ export function DonacionesClient({
                                     <TableHead className="hidden lg:table-cell">UMAs</TableHead>
                                     <TableHead className="hidden md:table-cell">Método</TableHead>
                                     <TableHead>PLD</TableHead>
-                                    <TableHead className="hidden lg:table-cell">SAT</TableHead>
                                     <TableHead className="text-right pr-5">Acciones</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -374,17 +376,6 @@ export function DonacionesClient({
                                             ) : (
                                                 <Badge variant="secondary" className="text-[10px]">
                                                     N/A
-                                                </Badge>
-                                            )}
-                                        </TableCell>
-                                        <TableCell className="hidden lg:table-cell">
-                                            {don.reportada_sat ? (
-                                                <Badge variant="outline" className="border-success text-success text-[10px]">
-                                                    Reportada
-                                                </Badge>
-                                            ) : (
-                                                <Badge variant="secondary" className="text-[10px]">
-                                                    Pendiente
                                                 </Badge>
                                             )}
                                         </TableCell>

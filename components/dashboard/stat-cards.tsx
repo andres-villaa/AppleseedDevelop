@@ -90,7 +90,7 @@ export function DonacionesKPI({ donaciones, umaActual }: { donaciones: Donacion[
   const totalRecaudado = donaciones.reduce((s, d) => s + Number(d.monto), 0)
   const donacionesRequierenPLD = donaciones.filter(d => d.requiere_reporte_pld).length
   const donacionesPendientesPLD = donaciones.filter(d => d.requiere_reporte_pld && !d.reportada_pld).length
-  const donacionesReportadasSAT = donaciones.filter(d => d.reportada_sat).length
+  const donacionesReportadasPLD = donaciones.filter(d => d.reportada_pld).length
   const umbralPLD = 645 * (umaActual?.valor || 108.57)
 
   return (
@@ -106,7 +106,7 @@ export function DonacionesKPI({ donaciones, umaActual }: { donaciones: Donacion[
         },
         { label: "Total Recaudado", value: formatMXN(totalRecaudado), sub: `${donaciones.length} donaciones`, icon: TrendingUp, color: "bg-primary/10 text-primary" },
         { label: "Requieren Reporte PLD", value: donacionesRequierenPLD.toString(), sub: `≥ 645 UMAs (${formatMXN(umbralPLD)})`, icon: FileWarning, color: "bg-destructive/10 text-destructive" },
-        { label: "Reportadas SAT", value: donacionesReportadasSAT.toString(), sub: `${donaciones.length - donacionesReportadasSAT} pendientes`, icon: CircleCheck, color: "bg-success/10 text-success" },
+        { label: "Reportadas PLD", value: donacionesReportadasPLD.toString(), sub: `${donacionesPendientesPLD} pendientes de reporte`, icon: CircleCheck, color: "bg-success/10 text-success" },
       ]} />
     </div>
   )
