@@ -155,3 +155,70 @@ export async function addDonante(formData: FormData) {
 
     return { success: true, data }
 }
+
+export async function updateDonanteEstatus(donanteId: string, estatus: "completo" | "incompleto" | "en_revision") {
+    const supabase = await createClient()
+
+    const { error } = await supabase
+        .from("Donantes")
+        .update({ estatus_expediente: estatus })
+        .eq("donante_id", donanteId)
+
+    if (error) {
+        console.error("Error updating donante status:", error)
+        return { error: error.message }
+    }
+
+    revalidatePath("/dashboard")
+    revalidatePath("/registros")
+
+    return { success: true }
+}
+
+export async function updateDonante(formData: FormData) {
+    const supabase = await createClient()
+
+    const donante_id = formData.get("donante_id") as string
+    const nombre = formData.get("nombre") as string
+    const tipo_persona = formData.get("tipo_persona") as string
+    const rfc = formData.get("rfc") as string
+    const curp = formData.get("curp") as string
+    const email = formData.get("email") as string
+    const regimen_fiscal = formData.get("regimen_fiscal") as string
+    const codigo_postal = formData.get("codigo_postal") as string
+    const direccion = formData.get("direccion") as string
+    const actividad_economica = formData.get("actividad_economica") as string
+    const es_pep = formData.get("es_pep") === "on" || formData.get("es_pep") === "true"
+
+    if (!donante_id || !nombre || !tipo_persona || !rfc || !email || !regimen_fiscal || !codigo_postal) {
+        return { error: "Los campos básicos son obligatorios" }
+    }
+
+    const { data, error } = await supabase
+        .from("Donantes")
+        .update({
+            nombre_razon_social: nombre,
+            tipo_persona: tipo_persona as "fisica" | "moral",
+            rfc,
+            curp: curp || null,
+            email,
+            regimen_fiscal,
+            codigo_postal,
+            direccion,
+            actividad_economica,
+            es_pep
+        })
+        .eq("donante_id", donante_id)
+        .select()
+        .single()
+
+    if (error) {
+        console.error("Error updating donante:", error)
+        return { error: error.message }
+    }
+
+    revalidatePath("/dashboard")
+    revalidatePath("/registros")
+
+    return { success: true, data }
+}
