@@ -49,7 +49,7 @@ export async function addDonacion(formData: FormData) {
     // --- Obtener donante para verificar estatus actual ---
     const { data: donante } = await supabase
         .from("Donantes")
-        .select("estatus_expediente, nombre_razon_social")
+        .select("estatus_expediente, nombre_razon_social, donacion_acumulada")
         .eq("donante_id", donante_id)
         .eq("org_id", user.id)
         .single()
@@ -140,15 +140,18 @@ export async function addDonacion(formData: FormData) {
         })
     }
 
-    // Actualizar donacion_acumulada del donante (best effort)
+    // Actualizar donacion_acumulada del donante
     try {
-        await supabase.rpc("increment_donacion_acumulada", {
-            p_donante_id: donante_id,
-            p_org_id: user.id,
-            p_monto: monto
-        })
-    } catch {
-        // Si la función RPC no existe, se ignora silenciosamente
+        const acumuladaActual = Number(donante?.donacion_acumulada) || 0
+        const nuevaAcumulada = acumuladaActual + monto
+
+        await supabase
+            .from("Donantes")
+            .update({ donacion_acumulada: nuevaAcumulada })
+            .eq("donante_id", donante_id)
+            .eq("org_id", user.id)
+    } catch (e) {
+        console.error("Error al actualizar donacion_acumulada:", e)
     }
 
     revalidatePath("/dashboard")
