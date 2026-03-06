@@ -60,6 +60,13 @@ function formatMXN(amount: number) {
     }).format(amount)
 }
 
+function formatFecha(fecha: string) {
+    if (!fecha) return ""
+    const clean = fecha.includes("T") ? fecha.slice(0, 10) : fecha
+    const d = new Date(clean + "T12:00:00")
+    return d.toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })
+}
+
 const CATEGORIAS = [
     "Renta",
     "Nómina",
@@ -193,27 +200,33 @@ export function GastosClient({ gastos, headerActions }: { gastos: Gasto[], heade
                 {/* Toolbar */}
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex flex-1 items-center gap-3 flex-wrap">
-                        <div className="relative flex-1 max-w-sm">
-                            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                            <Input
-                                placeholder="Buscar concepto, RFC o categoría..."
-                                value={search}
-                                onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-                                className="pl-9 h-9"
-                            />
+                        <div className="flex flex-col gap-1 flex-1 max-w-sm">
+                            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide px-0.5">Buscar</span>
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                                <Input
+                                    placeholder="Buscar concepto, RFC o categoría..."
+                                    value={search}
+                                    onChange={(e) => { setSearch(e.target.value); setPage(1) }}
+                                    className="pl-9 h-9"
+                                />
+                            </div>
                         </div>
-                        <Select value={filterCat} onValueChange={(v) => { setFilterCat(v); setPage(1) }}>
-                            <SelectTrigger className="w-[160px] h-9">
-                                <Filter className="mr-2 size-3.5" />
-                                <SelectValue placeholder="Categoría" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Todas las categorías</SelectItem>
-                                {CATEGORIAS.map((cat) => (
-                                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                        <div className="flex flex-col gap-1">
+                            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide px-0.5">Categoría</span>
+                            <Select value={filterCat} onValueChange={(v) => { setFilterCat(v); setPage(1) }}>
+                                <SelectTrigger className="w-[160px] h-9">
+                                    <Filter className="mr-2 size-3.5" />
+                                    <SelectValue placeholder="Categoría" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todas las categorías</SelectItem>
+                                    {CATEGORIAS.map((cat) => (
+                                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
 
                     <Dialog open={isNewOpen} onOpenChange={setIsNewOpen}>
@@ -341,7 +354,7 @@ export function GastosClient({ gastos, headerActions }: { gastos: Gasto[], heade
                                                 </div>
                                                 <div className="flex flex-col">
                                                     <span className="text-sm font-medium">{gasto.concepto}</span>
-                                                    <span className="text-[11px] text-muted-foreground md:hidden">{gasto.fecha}</span>
+                                                    <span className="text-[11px] text-muted-foreground md:hidden">{formatFecha(gasto.fecha)}</span>
                                                 </div>
                                             </div>
                                         </TableCell>
@@ -360,7 +373,7 @@ export function GastosClient({ gastos, headerActions }: { gastos: Gasto[], heade
                                             {gasto.rfc_proveedor}
                                         </TableCell>
                                         <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">
-                                            {gasto.fecha}
+                                            {formatFecha(gasto.fecha)}
                                         </TableCell>
                                         <TableCell className="text-right pr-5">
                                             <Button
@@ -410,7 +423,7 @@ export function GastosClient({ gastos, headerActions }: { gastos: Gasto[], heade
                                     </div>
                                     <div>
                                         <p className="text-xs text-muted-foreground">Fecha</p>
-                                        <p className="text-sm mt-0.5">{detail.fecha}</p>
+                                        <p className="text-sm mt-0.5">{formatFecha(detail.fecha)}</p>
                                     </div>
                                     <div className="col-span-2">
                                         <p className="text-xs text-muted-foreground">RFC del Proveedor</p>

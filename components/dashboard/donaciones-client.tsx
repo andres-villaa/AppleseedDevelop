@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react"
 import { toast } from "sonner"
-import { addDonacion, markAsReportedPLD } from "@/lib/supabase/actions"
+import { addDonacion, markAsReportedPLD, markAsReportedSAT } from "@/lib/supabase/actions"
 import { DashboardHeader } from "@/components/dashboard-header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -64,6 +64,15 @@ function umasEquivalentes(monto: number, valorUma: number) {
     return (monto / valorUma).toFixed(1)
 }
 
+function formatFecha(fecha: string) {
+    if (!fecha) return ""
+    // Normalizar: si viene como ISO con T (timestamp), tomar solo la parte de fecha
+    const clean = fecha.includes("T") ? fecha.slice(0, 10) : fecha
+    // Parsear como fecha local (agregar T12:00:00 evita desfase de zona horaria)
+    const d = new Date(clean + "T12:00:00")
+    return d.toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })
+}
+
 function getMetodoBadge(metodo: Donacion["metodo_pago"]) {
     const map: Record<Donacion["metodo_pago"], string> = {
         transferencia: "Transferencia",
@@ -106,7 +115,7 @@ export function DonacionesClient({
         const matchMetodo = filterMetodo === "all" || d.metodo_pago === filterMetodo
         const matchPLD =
             filterPLD === "all" ||
-            (filterPLD === "requiere" && d.requiere_reporte_pld) ||
+            (filterPLD === "requiere" && !d.reportada_sat) ||
             (filterPLD === "pendiente" && d.requiere_reporte_pld && !d.reportada_pld) ||
             (filterPLD === "reportada" && d.reportada_pld)
         return matchSearch && matchMetodo && matchPLD
@@ -118,7 +127,8 @@ export function DonacionesClient({
     const totalRecaudado = donaciones.reduce((s, d) => s + Number(d.monto), 0)
     const reportadasPLD = donaciones.filter((d) => d.reportada_pld).length
     const pendientesPLD = donaciones.filter((d) => d.requiere_reporte_pld && !d.reportada_pld).length
-    const totalRequierenReporte = donaciones.filter((d) => d.requiere_reporte_pld).length
+    // Solo cuenta las que AÚN están pendientes de reporte (no las ya reportadas)
+    const totalRequierenReporte = pendientesPLD
 
     return (
         <>
@@ -148,7 +158,7 @@ export function DonacionesClient({
                                 Requieren Reporte PLD
                             </div>
                             <p className="text-xl font-bold">{totalRequierenReporte}</p>
-                            <p className="text-[11px] text-muted-foreground mt-1">≥ 645 UMAs ({formatMXN(645 * (umaActual?.valor || 108.57))})</p>
+                            <p className="text-[11px] text-muted-foreground mt-1">≥ 3210 UMAs ({formatMXN(3210 * (umaActual?.valor || 117.31))})</p>
                         </CardContent>
                     </Card>
 
@@ -167,40 +177,49 @@ export function DonacionesClient({
                 {/* Toolbar */}
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex flex-1 items-center gap-3 flex-wrap">
-                        <div className="relative flex-1 max-w-sm">
-                            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                            <Input
-                                placeholder="Buscar por donante o ID..."
-                                value={search}
-                                onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-                                className="pl-9 h-9"
-                            />
+                        <div className="flex flex-col gap-1 flex-1 max-w-sm">
+                            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide px-0.5">Buscar</span>
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                                <Input
+                                    placeholder="Buscar por donante..."
+                                    value={search}
+                                    onChange={(e) => { setSearch(e.target.value); setPage(1) }}
+                                    className="pl-9 h-9"
+                                />
+                            </div>
                         </div>
-                        <Select value={filterMetodo} onValueChange={(v) => { setFilterMetodo(v); setPage(1) }}>
-                            <SelectTrigger className="w-[160px] h-9">
-                                <Filter className="mr-2 size-3.5" />
-                                <SelectValue placeholder="Método de pago" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Todos los métodos</SelectItem>
-                                <SelectItem value="transferencia">Transferencia</SelectItem>
-                                <SelectItem value="cheque">Cheque</SelectItem>
-                                <SelectItem value="efectivo">Efectivo</SelectItem>
-                                <SelectItem value="especie">Especie</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <Select value={filterPLD} onValueChange={(v) => { setFilterPLD(v); setPage(1) }}>
-                            <SelectTrigger className="w-[180px] h-9">
-                                <Filter className="mr-2 size-3.5" />
-                                <SelectValue placeholder="Estado PLD" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Todos</SelectItem>
-                                <SelectItem value="requiere">Requieren reporte</SelectItem>
-                                <SelectItem value="pendiente">PLD pendiente</SelectItem>
-                                <SelectItem value="reportada">Reportadas PLD</SelectItem>
-                            </SelectContent>
-                        </Select>
+                        <div className="flex flex-col gap-1">
+                            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide px-0.5">Método de pago</span>
+                            <Select value={filterMetodo} onValueChange={(v) => { setFilterMetodo(v); setPage(1) }}>
+                                <SelectTrigger className="w-[160px] h-9">
+                                    <Filter className="mr-2 size-3.5" />
+                                    <SelectValue placeholder="Pago" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todos</SelectItem>
+                                    <SelectItem value="transferencia">Transferencia</SelectItem>
+                                    <SelectItem value="cheque">Cheque</SelectItem>
+                                    <SelectItem value="efectivo">Efectivo</SelectItem>
+                                    <SelectItem value="especie">Especie</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide px-0.5">Reporte</span>
+                            <Select value={filterPLD} onValueChange={(v) => { setFilterPLD(v); setPage(1) }}>
+                                <SelectTrigger className="w-[180px] h-9">
+                                    <Filter className="mr-2 size-3.5" />
+                                    <SelectValue placeholder="Estado PLD" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todos</SelectItem>
+                                    <SelectItem value="requiere">SAT pendiente</SelectItem>
+                                    <SelectItem value="pendiente">PLD pendiente</SelectItem>
+                                    <SelectItem value="reportada">Reportadas PLD</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
 
                     <Dialog open={isNewOpen} onOpenChange={setIsNewOpen}>
@@ -275,7 +294,7 @@ export function DonacionesClient({
                                 </div>
                                 <div className="rounded-md border border-warning/40 bg-warning/5 p-3 text-xs text-muted-foreground">
                                     <span className="font-semibold text-foreground">Umbral PLD 2026:</span>{" "}
-                                    {formatMXN(645 * (umaActual?.valor || 117.31))} (645 UMAs × ${(umaActual?.valor || 117.31)})
+                                    {formatMXN(3210 * (umaActual?.valor || 117.31))} (3210 UMAs × ${(umaActual?.valor || 117.31)})
                                 </div>
                                 <div className="flex justify-end gap-2 pt-1">
                                     <Button type="button" variant="outline" onClick={() => setIsNewOpen(false)} disabled={isPending}>Cancelar</Button>
@@ -327,6 +346,7 @@ export function DonacionesClient({
                                     <TableHead className="hidden lg:table-cell">UMAs</TableHead>
                                     <TableHead className="hidden md:table-cell">Método</TableHead>
                                     <TableHead>PLD</TableHead>
+                                    <TableHead className="hidden md:table-cell">SAT</TableHead>
                                     <TableHead className="text-right pr-5">Acciones</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -351,7 +371,7 @@ export function DonacionesClient({
                                             </div>
                                         </TableCell>
                                         <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
-                                            {don.fecha}
+                                            {formatFecha(don.fecha)}
                                         </TableCell>
                                         <TableCell className="font-semibold text-sm">
                                             {formatMXN(Number(don.monto))}
@@ -379,6 +399,17 @@ export function DonacionesClient({
                                                 </Badge>
                                             )}
                                         </TableCell>
+                                        <TableCell className="hidden md:table-cell">
+                                            {don.reportada_sat ? (
+                                                <Badge variant="outline" className="border-success text-success text-[10px]">
+                                                    Reportada
+                                                </Badge>
+                                            ) : (
+                                                <Badge variant="secondary" className="text-[10px]">
+                                                    Pendiente
+                                                </Badge>
+                                            )}
+                                        </TableCell>
                                         <TableCell className="text-right pr-5">
                                             <Button
                                                 variant="ghost"
@@ -403,7 +434,7 @@ export function DonacionesClient({
                 <Dialog open={!!detail} onOpenChange={() => setDetail(null)}>
                     <DialogContent className="sm:max-w-lg">
                         <DialogHeader>
-                            <DialogTitle>Detalle de Donación #{detail?.donacion_id}</DialogTitle>
+                            <DialogTitle>Detalle de Donación</DialogTitle>
                             <DialogDescription>{detail?.nombre_donante}</DialogDescription>
                         </DialogHeader>
                         {detail && (
@@ -422,7 +453,7 @@ export function DonacionesClient({
                                     </div>
                                     <div>
                                         <p className="text-xs text-muted-foreground">Fecha</p>
-                                        <p className="text-sm mt-0.5">{detail.fecha}</p>
+                                        <p className="text-sm mt-0.5">{formatFecha(detail.fecha)}</p>
                                     </div>
                                     <div>
                                         <p className="text-xs text-muted-foreground">Método de Pago</p>
@@ -463,10 +494,11 @@ export function DonacionesClient({
                                     </div>
                                 </div>
 
-                                <div className="flex justify-end gap-2">
-                                    <Button variant="outline" onClick={() => setDetail(null)}>Cerrar</Button>
+                                <div className="flex flex-wrap justify-end gap-2 pt-1">
+                                    <Button size="sm" variant="outline" onClick={() => setDetail(null)}>Cerrar</Button>
                                     {detail.requiere_reporte_pld && !detail.reportada_pld && (
                                         <Button
+                                            size="sm"
                                             disabled={isPending}
                                             onClick={() => {
                                                 startTransition(async () => {
@@ -480,7 +512,27 @@ export function DonacionesClient({
                                                 })
                                             }}
                                         >
-                                            {isPending ? "Guardando..." : "Marcar como Reportada (PLD)"}
+                                            {isPending ? "Guardando..." : "Reportar PLD"}
+                                        </Button>
+                                    )}
+                                    {!detail.reportada_sat && (
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            disabled={isPending}
+                                            onClick={() => {
+                                                startTransition(async () => {
+                                                    const result = await markAsReportedSAT(detail.donacion_id)
+                                                    if (result.error) {
+                                                        toast.error(result.error)
+                                                    } else {
+                                                        toast.success("Marcada como reportada al SAT")
+                                                        setDetail(null)
+                                                    }
+                                                })
+                                            }}
+                                        >
+                                            {isPending ? "Guardando..." : "Reportar SAT"}
                                         </Button>
                                     )}
                                 </div>

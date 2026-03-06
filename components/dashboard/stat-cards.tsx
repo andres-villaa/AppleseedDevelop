@@ -69,8 +69,8 @@ function SectionHeader({ icon: Icon, label }: { icon: React.ElementType; label: 
 
 export function DonantesKPI({ donantes }: { donantes: Donante[] }) {
   const totalDonantes = donantes.length
-  const expedientesCompletos = donantes.filter(d => d.estatus_expediente === "completo").length
-  const expedientesIncompletos = donantes.filter(d => d.estatus_expediente !== "completo").length
+  const expedientesCompletos = donantes.filter(d => d.estatus_expediente === "documentos_subidos").length
+  const expedientesPendientes = donantes.filter(d => d.estatus_expediente === "pendiente_subir").length
   const donantesPEP = donantes.filter(d => d.es_pep).length
 
   return (
@@ -78,8 +78,8 @@ export function DonantesKPI({ donantes }: { donantes: Donante[] }) {
       <SectionHeader icon={Users} label="Donantes" />
       <StatRow stats={[
         { label: "Total Donantes", value: totalDonantes.toString(), sub: "registrados", icon: Users, color: "bg-primary/10 text-primary" },
-        { label: "Expedientes Completos", value: expedientesCompletos.toString(), sub: `${totalDonantes > 0 ? Math.round((expedientesCompletos / totalDonantes) * 100) : 0}% del total`, icon: UserCheck, color: "bg-success/10 text-success" },
-        { label: "Expedientes Pendientes", value: expedientesIncompletos.toString(), sub: "incompletos o en revisión", icon: UserX, color: "bg-warning/10 text-warning-foreground" },
+        { label: "Documentos Subidos", value: expedientesCompletos.toString(), sub: `${totalDonantes > 0 ? Math.round((expedientesCompletos / totalDonantes) * 100) : 0}% del total`, icon: UserCheck, color: "bg-success/10 text-success" },
+        { label: "Pendientes de Subir", value: expedientesPendientes.toString(), sub: "requieren documentos", icon: UserX, color: "bg-warning/10 text-warning-foreground" },
         { label: "Donantes PEP", value: donantesPEP.toString(), sub: "diligencia reforzada", icon: ShieldAlert, color: "bg-destructive/10 text-destructive" },
       ]} />
     </div>
@@ -91,7 +91,7 @@ export function DonacionesKPI({ donaciones, umaActual }: { donaciones: Donacion[
   const donacionesRequierenPLD = donaciones.filter(d => d.requiere_reporte_pld).length
   const donacionesPendientesPLD = donaciones.filter(d => d.requiere_reporte_pld && !d.reportada_pld).length
   const donacionesReportadasPLD = donaciones.filter(d => d.reportada_pld).length
-  const umbralPLD = 645 * (umaActual?.valor || 108.57)
+  const umbralPLD = 3210 * (umaActual?.valor || 117.31)
 
   return (
     <div className="flex flex-col gap-3">
@@ -105,7 +105,7 @@ export function DonacionesKPI({ donaciones, umaActual }: { donaciones: Donacion[
           color: "bg-muted text-muted-foreground"
         },
         { label: "Total Recaudado", value: formatMXN(totalRecaudado), sub: `${donaciones.length} donaciones`, icon: TrendingUp, color: "bg-primary/10 text-primary" },
-        { label: "Requieren Reporte PLD", value: donacionesRequierenPLD.toString(), sub: `≥ 645 UMAs (${formatMXN(umbralPLD)})`, icon: FileWarning, color: "bg-destructive/10 text-destructive" },
+        { label: "Requieren Reporte PLD", value: donacionesPendientesPLD.toString(), sub: `≥ 3210 UMAs (${formatMXN(umbralPLD)})`, icon: FileWarning, color: "bg-destructive/10 text-destructive" },
         { label: "Reportadas PLD", value: donacionesReportadasPLD.toString(), sub: `${donacionesPendientesPLD} pendientes de reporte`, icon: CircleCheck, color: "bg-success/10 text-success" },
       ]} />
     </div>

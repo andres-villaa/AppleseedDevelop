@@ -19,10 +19,8 @@ export async function addDonacion(formData: FormData) {
         return { error: "Todos los campos son obligatorios" }
     }
 
-    // Calcula si requiere PLD (>= 645 UMAs)
-    const requiere_reporte_pld = (monto >= (645 * valor_uma_aplicado))
-
-    const { data, error } = await supabase
+    // --- Insertar donación (requiere_reporte_pld se resolverá después) ---
+    const { data: nuevaDonacion, error: insertError } = await supabase
         .from("Donaciones")
         .insert({
             org_id: user.id,
@@ -31,22 +29,158 @@ export async function addDonacion(formData: FormData) {
             metodo_pago,
             fecha,
             valor_uma_aplicado,
-            requiere_reporte_pld,
+            requiere_reporte_pld: false,
             reportada_pld: false,
             reportada_sat: false
         })
         .select()
         .single()
 
-    if (error) {
-        console.error("Error inserting donacion:", error)
-        return { error: error.message }
+    if (insertError || !nuevaDonacion) {
+        console.error("Error inserting donacion:", insertError)
+        return { error: insertError?.message ?? "Error al insertar" }
+    }
+
+    const umasDonacion = monto / valor_uma_aplicado
+    const seisMonesAtras = new Date()
+    seisMonesAtras.setMonth(seisMonesAtras.getMonth() - 6)
+    const fechaLimite = seisMonesAtras.toISOString().split('T')[0]
+
+    // --- Obtener donante para verificar estatus actual ---
+    const { data: donante } = await supabase
+        .from("Donantes")
+        .select("estatus_expediente, nombre_razon_social")
+        .eq("donante_id", donante_id)
+        .eq("org_id", user.id)
+        .single()
+
+    // ============================================================
+    // UMBRAL IDENTIFICACIÓN: 1605 UMAs
+    // Solo evaluar si el donante aún está en "no_necesario"
+    // ============================================================
+    if (donante?.estatus_expediente === "no_necesario") {
+        let disparaIdentificacion = false
+
+        if (umasDonacion >= 1605) {
+            // La donación individual supera el umbral
+            disparaIdentificacion = true
+        } else {
+            // Sumar UMAs de los últimos 6 meses (incluyendo esta)
+            const { data: donacionesRecientes } = await supabase
+                .from("Donaciones")
+                .select("monto, valor_uma_aplicado")
+                .eq("donante_id", donante_id)
+                .eq("org_id", user.id)
+                .gte("fecha", fechaLimite)
+
+            const sumaUmas = (donacionesRecientes || []).reduce(
+                (acc, d) => acc + Number(d.monto) / Number(d.valor_uma_aplicado), 0
+            )
+            if (sumaUmas >= 1605) {
+                disparaIdentificacion = true
+            }
+        }
+
+        if (disparaIdentificacion) {
+            // Actualizar estatus del donante
+            await supabase
+                .from("Donantes")
+                .update({ estatus_expediente: "pendiente_subir" })
+                .eq("donante_id", donante_id)
+                .eq("org_id", user.id)
+
+            // Crear alerta
+            await supabase.from("Alertas_Cumplimiento").insert({
+                organizacion_id: user.id,
+                titulo: "Umbral de identificación alcanzado",
+                mensaje: `El donante ${donante.nombre_razon_social} ha alcanzado el umbral de 1,605 UMAs. Se requiere subir documentos de identificación.`,
+                tipo_alerta: "umbral_identificacion",
+                atendida: false,
+            })
+        }
+    }
+
+    // ============================================================
+    // UMBRAL PLD: 3210 UMAs en últimos 6 meses
+    // Solo cuentan donaciones con requiere_reporte_pld = false
+    // (las que ya dispararon PLD no se vuelven a contar)
+    // ============================================================
+    const { data: donacionesSinPLD } = await supabase
+        .from("Donaciones")
+        .select("donacion_id, monto, valor_uma_aplicado")
+        .eq("donante_id", donante_id)
+        .eq("org_id", user.id)
+        .eq("requiere_reporte_pld", false)
+        .gte("fecha", fechaLimite)
+
+    const sumaUmasPLD = (donacionesSinPLD || []).reduce(
+        (acc, d) => acc + Number(d.monto) / Number(d.valor_uma_aplicado), 0
+    )
+
+    if (sumaUmasPLD >= 3210) {
+        // Marcar TODAS las donaciones del batch como requiere_reporte_pld = true
+        // (incluyendo las anteriores que contribuyeron a la suma)
+        // Esto reinicia el contador a 0 para el siguiente ciclo
+        const idsDelBatch = (donacionesSinPLD || []).map(d => d.donacion_id)
+        if (idsDelBatch.length > 0) {
+            await supabase
+                .from("Donaciones")
+                .update({ requiere_reporte_pld: true })
+                .in("donacion_id", idsDelBatch)
+        }
+
+        // Crear alerta PLD
+        const nombreDonante = donante?.nombre_razon_social ?? "Donante"
+        await supabase.from("Alertas_Cumplimiento").insert({
+            organizacion_id: user.id,
+            titulo: "Reporte PLD requerido",
+            mensaje: `Las donaciones de ${nombreDonante} en los últimos 6 meses superan 3,210 UMAs. Se requiere reporte al portal PLD de la SHCP.`,
+            tipo_alerta: "reporte_pendiente",
+            atendida: false,
+        })
+    }
+
+    // Actualizar donacion_acumulada del donante (best effort)
+    try {
+        await supabase.rpc("increment_donacion_acumulada", {
+            p_donante_id: donante_id,
+            p_org_id: user.id,
+            p_monto: monto
+        })
+    } catch {
+        // Si la función RPC no existe, se ignora silenciosamente
     }
 
     revalidatePath("/dashboard")
     revalidatePath("/donaciones")
+    revalidatePath("/registros")
+    revalidatePath("/notificaciones")
 
-    return { success: true, data }
+    return { success: true, data: nuevaDonacion }
+}
+
+export async function marcarDocumentosSubidos(donanteId: string) {
+    const supabase = await createClient()
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: "No autenticado" }
+
+    const { error } = await supabase
+        .from("Donantes")
+        .update({ estatus_expediente: "documentos_subidos" })
+        .eq("donante_id", donanteId)
+        .eq("org_id", user.id)
+        .eq("estatus_expediente", "pendiente_subir") // Guard: solo si está pendiente
+
+    if (error) {
+        console.error("Error updating estatus donante:", error)
+        return { error: error.message }
+    }
+
+    revalidatePath("/registros")
+    revalidatePath("/dashboard")
+
+    return { success: true }
 }
 
 export async function addGasto(formData: FormData) {
@@ -117,6 +251,29 @@ export async function markAsReportedPLD(donacionId: number) {
     return { success: true }
 }
 
+export async function markAsReportedSAT(donacionId: number) {
+    const supabase = await createClient()
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: "No autenticado" }
+
+    const { error } = await supabase
+        .from("Donaciones")
+        .update({ reportada_sat: true })
+        .eq("donacion_id", donacionId)
+        .eq("org_id", user.id)
+
+    if (error) {
+        console.error("Error updating donacion (SAT):", error)
+        return { error: error.message }
+    }
+
+    revalidatePath("/donaciones")
+    revalidatePath("/dashboard")
+
+    return { success: true }
+}
+
 export async function addDonante(formData: FormData) {
     const supabase = await createClient()
 
@@ -152,7 +309,7 @@ export async function addDonante(formData: FormData) {
             direccion,
             actividad_economica,
             es_pep,
-            estatus_expediente: "en_revision", // Default status for new donors
+            estatus_expediente: "no_necesario",
             donacion_acumulada: 0
         })
         .select()
