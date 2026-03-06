@@ -134,14 +134,17 @@ export function DocumentosClient({
 
                 {/* Toolbar */}
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="relative flex-1 max-w-sm">
-                        <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                            placeholder="Buscar documentos..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            className="pl-9 h-9"
-                        />
+                    <div className="flex flex-col gap-1 flex-1 max-w-sm">
+                        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide px-0.5">Buscar</span>
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                            <Input
+                                placeholder="Buscar documentos..."
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                className="pl-9 h-9"
+                            />
+                        </div>
                     </div>
                     <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
                         <DialogTrigger asChild>
@@ -212,32 +215,38 @@ export function DocumentosClient({
 
                         <div className="ml-8">
                             {activeTab === "organizacion" ? (
-                                <Select value={filterTipoOrg} onValueChange={setFilterTipoOrg}>
-                                    <SelectTrigger className="w-[150px] h-9">
-                                        <Filter className="mr-2 size-3.5" />
-                                        <SelectValue placeholder="Tipo" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">Todos</SelectItem>
-                                        <SelectItem value="legal">Legal</SelectItem>
-                                        <SelectItem value="fiscal">Fiscal</SelectItem>
-                                        <SelectItem value="gasto">Gasto</SelectItem>
-                                    </SelectContent>
-                                </Select>
+                                <div className="flex flex-col gap-1">
+                                    <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide px-0.5">Tipo</span>
+                                    <Select value={filterTipoOrg} onValueChange={setFilterTipoOrg}>
+                                        <SelectTrigger className="w-[150px] h-9">
+                                            <Filter className="mr-2 size-3.5" />
+                                            <SelectValue placeholder="Tipo" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Todos</SelectItem>
+                                            <SelectItem value="legal">Legal</SelectItem>
+                                            <SelectItem value="fiscal">Fiscal</SelectItem>
+                                            <SelectItem value="gasto">Gasto</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             ) : (
-                                <Select value={filterTipoDon} onValueChange={setFilterTipoDon}>
-                                    <SelectTrigger className="w-[180px] h-9">
-                                        <Filter className="mr-2 size-3.5" />
-                                        <SelectValue placeholder="Tipo" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">Todos</SelectItem>
-                                        <SelectItem value="identificación">Identificación Oficial</SelectItem>
-                                        <SelectItem value="comprobante">Comprobante de Domicilio</SelectItem>
-                                        <SelectItem value="constancia">Constancia de Donación</SelectItem>
-                                        <SelectItem value="declaración">Declaración de PEP</SelectItem>
-                                    </SelectContent>
-                                </Select>
+                                <div className="flex flex-col gap-1">
+                                    <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide px-0.5">Tipo</span>
+                                    <Select value={filterTipoDon} onValueChange={setFilterTipoDon}>
+                                        <SelectTrigger className="w-[180px] h-9">
+                                            <Filter className="mr-2 size-3.5" />
+                                            <SelectValue placeholder="Tipo" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Todos</SelectItem>
+                                            <SelectItem value="identificación">Identificación Oficial</SelectItem>
+                                            <SelectItem value="comprobante">Comprobante de Domicilio</SelectItem>
+                                            <SelectItem value="constancia">Constancia de Donación</SelectItem>
+                                            <SelectItem value="declaración">Declaración de PEP</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             )}
                         </div>
                     </div>

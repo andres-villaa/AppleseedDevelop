@@ -1,6 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { createClient } from "@/lib/supabase/client"
+import { updateOrganizacion } from "@/lib/supabase/actions"
+import { toast } from "sonner"
 import { DashboardHeader } from "@/components/dashboard-header"
 import {
     Card,
@@ -46,49 +49,6 @@ import {
     AlertTriangle,
 } from "lucide-react"
 
-const activityLog = [
-    {
-        id: 1,
-        accion: "Expediente KYC enviado",
-        detalle: "Documentacion enviada para revision de cumplimiento",
-        fecha: "2026-02-18 14:32",
-        icon: FileText,
-        color: "text-primary",
-    },
-    {
-        id: 2,
-        accion: "Alerta revisada",
-        detalle: "ALT-003 - Coincidencia en lista PEP atendida",
-        fecha: "2026-02-17 11:10",
-        icon: AlertTriangle,
-        color: "text-destructive",
-    },
-    {
-        id: 3,
-        accion: "Documento cargado",
-        detalle: "Acta Constitutiva actualizada",
-        fecha: "2026-02-16 16:55",
-        icon: CheckCircle,
-        color: "text-success",
-    },
-    {
-        id: 4,
-        accion: "Beneficiario registrado",
-        detalle: "Nuevo miembro del consejo directivo agregado",
-        fecha: "2026-02-15 09:20",
-        icon: Users,
-        color: "text-primary",
-    },
-    {
-        id: 5,
-        accion: "Perfil de organizacion actualizado",
-        detalle: "Datos de contacto y mision actualizados",
-        fecha: "2026-02-14 13:45",
-        icon: Building2,
-        color: "text-muted-foreground",
-    },
-]
-
 const stats = [
     { label: "Documentos Activos", value: "8", icon: FileText, color: "text-primary" },
     { label: "Alertas Pendientes", value: "2", icon: AlertTriangle, color: "text-destructive" },
@@ -98,43 +58,90 @@ const stats = [
 
 export default function PerfilPage() {
     const [editMode, setEditMode] = useState(false)
-    const [saved, setSaved] = useState(false)
-
-    // Representante / contacto de la OSC
-    const [repForm, setRepForm] = useState({
-        nombre: "Maria",
-        apellido: "Alvarez",
-        cargo: "Directora Ejecutiva",
-        email: "maria.alvarez@fundacionesperanza.org",
-        telefono: "+52 55 1234 5678",
-    })
+    const [isLoading, setIsLoading] = useState(true)
+    const [isSaving, setIsSaving] = useState(false)
 
     // Datos de la organizacion
     const [orgForm, setOrgForm] = useState({
-        nombre: "Fundacion Esperanza A.C.",
-        tipo: "asociacion_civil",
-        rfc: "FES200301ABC",
-        cluni: "FESE200301ABC123",
-        fechaConstitucion: "2020-03-01",
-        mision: "Promovemos el desarrollo comunitario sustentable a traves de programas de educacion, salud y medio ambiente en comunidades vulnerables del sur de Mexico.",
-        sitioWeb: "www.fundacionesperanza.org",
-        estado: "Oaxaca",
-        municipio: "Oaxaca de Juarez",
-        sector: "desarrollo_comunitario",
+        nombre: "",
+        tipo: "",
+        rfc: "",
+        cluni: "",
+        fechaConstitucion: "",
+        mision: "",
+        sitioWeb: "",
+        estado: "",
+        municipio: "",
+        sector: "",
     })
 
-    function handleRepChange(field: string, value: string) {
-        setRepForm((prev) => ({ ...prev, [field]: value }))
-    }
+    useEffect(() => {
+        async function loadProfile() {
+            try {
+                const supabase = createClient()
+                const { data: { user } } = await supabase.auth.getUser()
+
+                if (!user) {
+                    setIsLoading(false)
+                    return
+                }
+
+                const { data, error } = await supabase
+                    .from('Organizaciones')
+                    .select('*')
+                    .eq('org_id', user.id)
+                    .single()
+
+                if (error) throw error
+
+                if (data) {
+                    setOrgForm({
+                        nombre: data.nombre || "",
+                        tipo: data.tipo_figura_juridica || "",
+                        rfc: data.rfc || "",
+                        cluni: data.cluni || "",
+                        fechaConstitucion: data.fecha_constitucion || "",
+                        mision: data.mision || "",
+                        sitioWeb: data.sitio_web || "",
+                        estado: data.estado || "",
+                        municipio: data.municipio || "",
+                        sector: data.sector_causa || "",
+                    })
+                }
+            } catch (error) {
+                console.error("Error cargando el perfil", error)
+                toast.error("Ocurrió un error al cargar la información")
+            } finally {
+                setIsLoading(false)
+            }
+        }
+        loadProfile()
+    }, [])
 
     function handleOrgChange(field: string, value: string) {
         setOrgForm((prev) => ({ ...prev, [field]: value }))
     }
 
-    function handleSave() {
-        setEditMode(false)
-        setSaved(true)
-        setTimeout(() => setSaved(false), 3000)
+    async function handleSave() {
+        setIsSaving(true)
+        const formData = new FormData()
+        Object.entries(orgForm).forEach(([key, value]) => {
+            formData.append(key, value)
+        })
+
+        try {
+            const result = await updateOrganizacion(formData)
+            if (result?.error) {
+                toast.error(result.error)
+            } else {
+                toast.success("Información actualizada correctamente")
+                setEditMode(false)
+            }
+        } catch (error) {
+            toast.error("Ocurrió un error inesperado")
+        } finally {
+            setIsSaving(false)
+        }
     }
 
     return (
@@ -181,14 +188,6 @@ export default function PerfilPage() {
                                 </p>
                                 <div className="flex flex-wrap items-center gap-4 mt-1 text-xs text-muted-foreground">
                                     <span className="flex items-center gap-1.5">
-                                        <User className="size-3" />
-                                        Representada por:{" "}
-                                        <span className="font-medium text-foreground ml-1">
-                                            {repForm.nombre} {repForm.apellido}
-                                        </span>
-                                        , {repForm.cargo}
-                                    </span>
-                                    <span className="flex items-center gap-1.5">
                                         <MapPin className="size-3" />
                                         {orgForm.municipio}, {orgForm.estado}
                                     </span>
@@ -206,18 +205,19 @@ export default function PerfilPage() {
                                     size="sm"
                                     className="shrink-0 gap-2"
                                     onClick={() => setEditMode(true)}
+                                    disabled={isLoading}
                                 >
                                     <Edit2 className="size-3.5" />
                                     Editar
                                 </Button>
                             ) : (
                                 <div className="flex gap-2 shrink-0">
-                                    <Button variant="outline" size="sm" onClick={() => setEditMode(false)}>
+                                    <Button variant="outline" size="sm" onClick={() => setEditMode(false)} disabled={isSaving}>
                                         Cancelar
                                     </Button>
-                                    <Button size="sm" className="gap-2" onClick={handleSave}>
+                                    <Button size="sm" className="gap-2" onClick={handleSave} disabled={isSaving}>
                                         <Save className="size-3.5" />
-                                        Guardar
+                                        {isSaving ? "Guardando..." : "Guardar"}
                                     </Button>
                                 </div>
                             )}
@@ -228,13 +228,6 @@ export default function PerfilPage() {
                             <p className="text-xs font-medium text-muted-foreground mb-1">Mision</p>
                             <p className="text-sm text-foreground leading-relaxed">{orgForm.mision}</p>
                         </div>
-
-                        {saved && (
-                            <div className="mt-4 flex items-center gap-2 rounded-md bg-success/10 px-3 py-2 text-xs text-success">
-                                <CheckCircle className="size-3.5" />
-                                Informacion actualizada correctamente
-                            </div>
-                        )}
                     </CardContent>
                 </Card>
 
@@ -262,21 +255,9 @@ export default function PerfilPage() {
                             <Building2 className="size-3.5" />
                             Organizacion
                         </TabsTrigger>
-                        <TabsTrigger value="representante" className="gap-2">
-                            <User className="size-3.5" />
-                            Representante
-                        </TabsTrigger>
                         <TabsTrigger value="seguridad" className="gap-2">
                             <Lock className="size-3.5" />
                             Seguridad
-                        </TabsTrigger>
-                        <TabsTrigger value="actividad" className="gap-2">
-                            <Activity className="size-3.5" />
-                            Actividad
-                        </TabsTrigger>
-                        <TabsTrigger value="notificaciones" className="gap-2">
-                            <Bell className="size-3.5" />
-                            Notificaciones
                         </TabsTrigger>
                     </TabsList>
 
@@ -429,98 +410,6 @@ export default function PerfilPage() {
                         </Card>
                     </TabsContent>
 
-                    {/* Tab: Representante */}
-                    <TabsContent value="representante" className="mt-4">
-                        <Card>
-                            <CardHeader className="pb-4">
-                                <CardTitle className="text-base flex items-center gap-2">
-                                    <User className="size-4" />
-                                    Datos del Representante Legal / Enlace
-                                </CardTitle>
-                                <CardDescription>
-                                    Persona responsable de administrar la cuenta en CumplAML
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="flex flex-col gap-6">
-                                <div className="grid gap-4 sm:grid-cols-2">
-                                    <div className="flex flex-col gap-2">
-                                        <Label>Nombre(s)</Label>
-                                        <Input
-                                            value={repForm.nombre}
-                                            disabled={!editMode}
-                                            onChange={(e) => handleRepChange("nombre", e.target.value)}
-                                        />
-                                    </div>
-                                    <div className="flex flex-col gap-2">
-                                        <Label>Apellido(s)</Label>
-                                        <Input
-                                            value={repForm.apellido}
-                                            disabled={!editMode}
-                                            onChange={(e) => handleRepChange("apellido", e.target.value)}
-                                        />
-                                    </div>
-                                    <div className="flex flex-col gap-2">
-                                        <Label>Cargo en la Organizacion</Label>
-                                        <Select
-                                            value={repForm.cargo}
-                                            onValueChange={(v) => handleRepChange("cargo", v)}
-                                            disabled={!editMode}
-                                        >
-                                            <SelectTrigger>
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="Directora Ejecutiva">Directora / Director Ejecutivo</SelectItem>
-                                                <SelectItem value="Presidenta">Presidenta / Presidente</SelectItem>
-                                                <SelectItem value="Representante Legal">Representante Legal</SelectItem>
-                                                <SelectItem value="Coordinadora de Cumplimiento">Coordinadora / Coordinador de Cumplimiento</SelectItem>
-                                                <SelectItem value="Secretaria">Secretaria / Secretario</SelectItem>
-                                                <SelectItem value="Tesorera">Tesorera / Tesorero</SelectItem>
-                                                <SelectItem value="Otro">Otro</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="flex flex-col gap-2">
-                                        <Label>Correo Electronico</Label>
-                                        <div className="relative">
-                                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                                            <Input
-                                                className="pl-9"
-                                                value={repForm.email}
-                                                disabled={!editMode}
-                                                onChange={(e) => handleRepChange("email", e.target.value)}
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="flex flex-col gap-2">
-                                        <Label>Telefono de Contacto</Label>
-                                        <div className="relative">
-                                            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                                            <Input
-                                                className="pl-9"
-                                                value={repForm.telefono}
-                                                disabled={!editMode}
-                                                onChange={(e) => handleRepChange("telefono", e.target.value)}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <Separator />
-
-                                <div className="rounded-lg border border-border bg-muted/30 p-4 flex gap-3">
-                                    <Shield className="size-5 text-primary shrink-0 mt-0.5" />
-                                    <div>
-                                        <p className="text-sm font-medium">Nivel de Acceso</p>
-                                        <p className="text-xs text-muted-foreground mt-0.5">
-                                            Administrador de la organizacion — acceso completo al expediente, documentos y alertas
-                                        </p>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-
                     {/* Tab: Seguridad */}
                     <TabsContent value="seguridad" className="mt-4">
                         <div className="flex flex-col gap-4">
@@ -594,111 +483,9 @@ export default function PerfilPage() {
                         </div>
                     </TabsContent>
 
-                    {/* Tab: Actividad */}
-                    <TabsContent value="actividad" className="mt-4">
-                        <Card>
-                            <CardHeader className="pb-4">
-                                <CardTitle className="text-base flex items-center gap-2">
-                                    <Activity className="size-4" />
-                                    Historial de Actividad
-                                </CardTitle>
-                                <CardDescription>
-                                    Ultimas acciones realizadas en CumplAML para tu organizacion
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="flex flex-col gap-0">
-                                    {activityLog.map((item, index) => (
-                                        <div key={item.id} className="flex gap-4">
-                                            <div className="flex flex-col items-center">
-                                                <div className={`flex size-8 shrink-0 items-center justify-center rounded-full bg-muted ${item.color}`}>
-                                                    <item.icon className="size-4" />
-                                                </div>
-                                                {index < activityLog.length - 1 && (
-                                                    <div className="w-px flex-1 bg-border my-1" />
-                                                )}
-                                            </div>
-                                            <div className="flex flex-1 flex-col pb-4 pt-1">
-                                                <p className="text-sm font-medium text-foreground">{item.accion}</p>
-                                                <p className="text-xs text-muted-foreground mt-0.5">{item.detalle}</p>
-                                                <p className="text-[11px] text-muted-foreground/60 mt-1 flex items-center gap-1">
-                                                    <Clock className="size-3" />
-                                                    {item.fecha}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
 
-                    {/* Tab: Notificaciones */}
-                    <TabsContent value="notificaciones" className="mt-4">
-                        <Card>
-                            <CardHeader className="pb-4">
-                                <CardTitle className="text-base flex items-center gap-2">
-                                    <Bell className="size-4" />
-                                    Preferencias de Notificaciones
-                                </CardTitle>
-                                <CardDescription>
-                                    Configura como y cuando recibes avisos sobre tu organizacion
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="flex flex-col gap-4">
-                                {[
-                                    {
-                                        titulo: "Alertas de Cumplimiento",
-                                        desc: "Notificaciones cuando se detecta una alerta en tu expediente",
-                                        activo: true,
-                                    },
-                                    {
-                                        titulo: "Documentos por Vencer",
-                                        desc: "Avisos 30 dias antes de que expire un documento requerido",
-                                        activo: true,
-                                    },
-                                    {
-                                        titulo: "Solicitudes de Informacion",
-                                        desc: "Cuando el equipo de cumplimiento solicita informacion adicional",
-                                        activo: true,
-                                    },
-                                    {
-                                        titulo: "Actualizaciones Regulatorias",
-                                        desc: "Cambios en la normativa ALD que afecten a tu organizacion",
-                                        activo: false,
-                                    },
-                                    {
-                                        titulo: "Resumen Mensual",
-                                        desc: "Reporte del estado de cumplimiento de tu OSC cada mes",
-                                        activo: true,
-                                    },
-                                ].map((notif, i) => (
-                                    <div key={i} className="flex items-start justify-between gap-4 rounded-lg border p-4">
-                                        <div>
-                                            <p className="text-sm font-medium">{notif.titulo}</p>
-                                            <p className="text-xs text-muted-foreground mt-0.5">{notif.desc}</p>
-                                        </div>
-                                        <button
-                                            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${notif.activo ? "bg-primary" : "bg-input"
-                                                }`}
-                                            role="switch"
-                                            aria-checked={notif.activo}
-                                        >
-                                            <span
-                                                className={`pointer-events-none block size-4 rounded-full bg-background shadow-lg transition-transform ${notif.activo ? "translate-x-4" : "translate-x-0"
-                                                    }`}
-                                            />
-                                        </button>
-                                    </div>
-                                ))}
-                                <div className="flex justify-end pt-2">
-                                    <Button size="sm">Guardar Preferencias</Button>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
                 </Tabs>
-            </div>
+            </div >
         </>
     )
 }

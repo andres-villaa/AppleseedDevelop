@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useTransition } from "react"
 import { DashboardHeader } from "@/components/dashboard-header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -40,8 +40,12 @@ import {
     ChevronRight,
     ShieldAlert,
     User,
+    Loader2,
+    Edit,
 } from "lucide-react"
 import type { Donante } from "@/lib/types"
+import { addDonante, marcarDocumentosSubidos, updateDonante } from "@/lib/supabase/actions"
+import { toast } from "sonner"
 
 function formatMXN(amount: number) {
     return new Intl.NumberFormat("es-MX", {
@@ -53,24 +57,28 @@ function formatMXN(amount: number) {
 
 function getEstatusbadge(estatus: Donante["estatus_expediente"]) {
     switch (estatus) {
-        case "completo":
-            return <Badge variant="outline" className="border-success text-success text-[10px]">Completo</Badge>
-        case "en_revision":
-            return <Badge variant="default" className="bg-primary text-primary-foreground text-[10px]">En Revisión</Badge>
-        case "incompleto":
-            return <Badge variant="destructive" className="bg-destructive text-white text-[10px]">Incompleto</Badge>
+        case "no_necesario":
+            return <Badge variant="secondary" className="text-[10px]">No necesario</Badge>
+        case "pendiente_subir":
+            return <Badge variant="destructive" className="text-[10px]">Pendiente de subir</Badge>
+        case "documentos_subidos":
+            return <Badge variant="outline" className="border-success text-success text-[10px]">Documentos subidos</Badge>
+        default:
+            return <Badge variant="secondary" className="text-[10px]">{estatus}</Badge>
     }
 }
 
 // Helper used in dialog
 function getEstatusband(estatus: Donante["estatus_expediente"]) {
     switch (estatus) {
-        case "completo":
-            return <Badge variant="outline" className="border-success text-success text-[10px]">Expediente Completo</Badge>
-        case "en_revision":
-            return <Badge variant="default" className="bg-primary text-primary-foreground text-[10px]">En Revisión</Badge>
-        case "incompleto":
-            return <Badge variant="destructive" className="bg-destructive text-white text-[10px]">Expediente Incompleto</Badge>
+        case "no_necesario":
+            return <Badge variant="secondary" className="text-[10px]">Expediente: No necesario</Badge>
+        case "pendiente_subir":
+            return <Badge variant="destructive" className="text-[10px]">Pendiente de subir documentos</Badge>
+        case "documentos_subidos":
+            return <Badge variant="outline" className="border-success text-success text-[10px]">Documentos subidos</Badge>
+        default:
+            return <Badge variant="secondary" className="text-[10px]">{estatus}</Badge>
     }
 }
 
@@ -79,8 +87,118 @@ export function RegistrosClient({ donantes, headerActions }: { donantes: Donante
     const [filterEstatus, setFilterEstatus] = useState<string>("all")
     const [filterTipo, setFilterTipo] = useState<string>("all")
     const [isDialogOpen, setIsDialogOpen] = useState(false)
+    const [isEditOpen, setIsEditOpen] = useState(false)
     const [detailDonante, setDetailDonante] = useState<Donante | null>(null)
     const [page, setPage] = useState(1)
+    const [isPending, startTransition] = useTransition()
+
+    // Form state
+    const [formData, setFormData] = useState({
+        nombre: "",
+        tipo_persona: "",
+        rfc: "",
+        curp: "",
+        email: "",
+        regimen_fiscal: "",
+        codigo_postal: "",
+        direccion: "",
+        actividad_economica: "",
+        es_pep: false,
+    })
+
+    const handleInputChange = (id: string, value: string | boolean) => {
+        setFormData(prev => ({ ...prev, [id]: value }))
+    }
+
+    const openEdit = (donante: Donante) => {
+        setFormData({
+            nombre: donante.nombre_razon_social,
+            tipo_persona: donante.tipo_persona,
+            rfc: donante.rfc,
+            curp: donante.curp || "",
+            email: donante.email,
+            regimen_fiscal: donante.regimen_fiscal,
+            codigo_postal: donante.codigo_postal,
+            direccion: donante.direccion,
+            actividad_economica: donante.actividad_economica,
+            es_pep: donante.es_pep,
+        })
+        setDetailDonante(donante)
+        setIsEditOpen(true)
+    }
+
+    const handleStatusUpdate = async (donanteId: string) => {
+        startTransition(async () => {
+            const result = await marcarDocumentosSubidos(donanteId)
+            if (result.error) {
+                toast.error(`Error al actualizar estatus: ${result.error}`)
+            } else {
+                toast.success("Estatus actualizado: Documentos subidos")
+                setDetailDonante(prev => prev ? { ...prev, estatus_expediente: "documentos_subidos" } : null)
+            }
+        })
+    }
+
+    const handleEditSubmit = async () => {
+        if (!detailDonante) return
+        if (!formData.nombre || !formData.tipo_persona || !formData.rfc || !formData.email || !formData.regimen_fiscal || !formData.codigo_postal) {
+            toast.error("Por favor completa los campos obligatorios")
+            return
+        }
+
+        startTransition(async () => {
+            const form = new FormData()
+            form.append("donante_id", detailDonante.donante_id)
+            Object.entries(formData).forEach(([key, value]) => {
+                form.append(key, value.toString())
+            })
+
+            const result = await updateDonante(form)
+
+            if (result.error) {
+                toast.error(`Error al actualizar donante: ${result.error}`)
+            } else {
+                toast.success("Donante actualizado exitosamente")
+                setIsEditOpen(false)
+                setDetailDonante(null)
+            }
+        })
+    }
+
+    const handleSubmit = async () => {
+        if (!formData.nombre || !formData.tipo_persona || !formData.rfc || !formData.email || !formData.regimen_fiscal || !formData.codigo_postal) {
+            toast.error("Por favor completa los campos obligatorios")
+            return
+        }
+
+        startTransition(async () => {
+            const form = new FormData()
+            Object.entries(formData).forEach(([key, value]) => {
+                form.append(key, value.toString())
+            })
+
+            const result = await addDonante(form)
+
+            if (result.error) {
+                toast.error(`Error: ${result.error}`)
+            } else {
+                toast.success("Donante registrado exitosamente")
+                setIsDialogOpen(false)
+                setFormData({
+                    nombre: "",
+                    tipo_persona: "",
+                    rfc: "",
+                    curp: "",
+                    email: "",
+                    regimen_fiscal: "",
+                    codigo_postal: "",
+                    direccion: "",
+                    actividad_economica: "",
+                    es_pep: false,
+                })
+            }
+        })
+    }
 
     const ITEMS_PER_PAGE = 7
 
@@ -108,22 +226,22 @@ export function RegistrosClient({ donantes, headerActions }: { donantes: Donante
 
                 {/* Summary cards */}
                 <div className="grid gap-4 sm:grid-cols-3">
-                    <Card className="border-l-4 border-l-success">
+                    <Card className="border-l-4 border-l-muted">
                         <CardContent className="p-4">
-                            <p className="text-xs text-muted-foreground">Expedientes Completos</p>
-                            <p className="text-2xl font-bold mt-1">{donantes.filter(d => d.estatus_expediente === "completo").length}</p>
-                        </CardContent>
-                    </Card>
-                    <Card className="border-l-4 border-l-primary">
-                        <CardContent className="p-4">
-                            <p className="text-xs text-muted-foreground">En Revisión</p>
-                            <p className="text-2xl font-bold mt-1">{donantes.filter(d => d.estatus_expediente === "en_revision").length}</p>
+                            <p className="text-xs text-muted-foreground">No necesario</p>
+                            <p className="text-2xl font-bold mt-1">{donantes.filter(d => d.estatus_expediente === "no_necesario").length}</p>
                         </CardContent>
                     </Card>
                     <Card className="border-l-4 border-l-destructive">
                         <CardContent className="p-4">
-                            <p className="text-xs text-muted-foreground">Expedientes Incompletos</p>
-                            <p className="text-2xl font-bold mt-1">{donantes.filter(d => d.estatus_expediente === "incompleto").length}</p>
+                            <p className="text-xs text-muted-foreground">Pendientes de subir</p>
+                            <p className="text-2xl font-bold mt-1">{donantes.filter(d => d.estatus_expediente === "pendiente_subir").length}</p>
+                        </CardContent>
+                    </Card>
+                    <Card className="border-l-4 border-l-success">
+                        <CardContent className="p-4">
+                            <p className="text-xs text-muted-foreground">Documentos subidos</p>
+                            <p className="text-2xl font-bold mt-1">{donantes.filter(d => d.estatus_expediente === "documentos_subidos").length}</p>
                         </CardContent>
                     </Card>
                 </div>
@@ -131,38 +249,47 @@ export function RegistrosClient({ donantes, headerActions }: { donantes: Donante
                 {/* Toolbar */}
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex flex-1 items-center gap-3 flex-wrap">
-                        <div className="relative flex-1 max-w-sm">
-                            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                            <Input
-                                placeholder="Buscar por nombre, RFC o email..."
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                className="pl-9 h-9"
-                            />
+                        <div className="flex flex-col gap-1 flex-1 max-w-sm">
+                            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide px-0.5">Buscar</span>
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                                <Input
+                                    placeholder="Buscar por nombre, RFC o email..."
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    className="pl-9 h-9"
+                                />
+                            </div>
                         </div>
-                        <Select value={filterEstatus} onValueChange={setFilterEstatus}>
-                            <SelectTrigger className="w-[160px] h-9">
-                                <Filter className="mr-2 size-3.5" />
-                                <SelectValue placeholder="Expediente" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Todos</SelectItem>
-                                <SelectItem value="completo">Completo</SelectItem>
-                                <SelectItem value="en_revision">En Revisión</SelectItem>
-                                <SelectItem value="incompleto">Incompleto</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <Select value={filterTipo} onValueChange={setFilterTipo}>
-                            <SelectTrigger className="w-[160px] h-9">
-                                <Filter className="mr-2 size-3.5" />
-                                <SelectValue placeholder="Tipo" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Todos</SelectItem>
-                                <SelectItem value="fisica">Persona Física</SelectItem>
-                                <SelectItem value="moral">Persona Moral</SelectItem>
-                            </SelectContent>
-                        </Select>
+                        <div className="flex flex-col gap-1">
+                            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide px-0.5">Expediente</span>
+                            <Select value={filterEstatus} onValueChange={setFilterEstatus}>
+                                <SelectTrigger className="w-[180px] h-9">
+                                    <Filter className="mr-2 size-3.5" />
+                                    <SelectValue placeholder="Expediente" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todos</SelectItem>
+                                    <SelectItem value="no_necesario">No necesario</SelectItem>
+                                    <SelectItem value="pendiente_subir">Pendiente de subir</SelectItem>
+                                    <SelectItem value="documentos_subidos">Documentos subidos</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide px-0.5">Tipo</span>
+                            <Select value={filterTipo} onValueChange={setFilterTipo}>
+                                <SelectTrigger className="w-[160px] h-9">
+                                    <Filter className="mr-2 size-3.5" />
+                                    <SelectValue placeholder="Tipo" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todos</SelectItem>
+                                    <SelectItem value="fisica">Persona Física</SelectItem>
+                                    <SelectItem value="moral">Persona Moral</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
                     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                         <DialogTrigger asChild>
@@ -181,13 +308,21 @@ export function RegistrosClient({ donantes, headerActions }: { donantes: Donante
                             <div className="flex flex-col gap-4 pt-2">
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="col-span-2 flex flex-col gap-2">
-                                        <Label htmlFor="nombre">Nombre Completo / Razón Social</Label>
-                                        <Input id="nombre" placeholder="Ej. Inversiones del Norte S.A." />
+                                        <Label htmlFor="nombre">Nombre Completo / Razón Social *</Label>
+                                        <Input
+                                            id="nombre"
+                                            placeholder="Ej. Inversiones del Norte S.A."
+                                            value={formData.nombre}
+                                            onChange={(e) => handleInputChange("nombre", e.target.value)}
+                                        />
                                     </div>
                                     <div className="flex flex-col gap-2">
-                                        <Label htmlFor="tipo">Tipo de Persona</Label>
-                                        <Select>
-                                            <SelectTrigger id="tipo">
+                                        <Label htmlFor="tipo_persona">Tipo de Persona *</Label>
+                                        <Select
+                                            value={formData.tipo_persona}
+                                            onValueChange={(value) => handleInputChange("tipo_persona", value)}
+                                        >
+                                            <SelectTrigger id="tipo_persona">
                                                 <SelectValue placeholder="Seleccionar" />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -197,21 +332,40 @@ export function RegistrosClient({ donantes, headerActions }: { donantes: Donante
                                         </Select>
                                     </div>
                                     <div className="flex flex-col gap-2">
-                                        <Label htmlFor="rfc">RFC</Label>
-                                        <Input id="rfc" placeholder="Ej. INO850101AAA" />
+                                        <Label htmlFor="rfc">RFC *</Label>
+                                        <Input
+                                            id="rfc"
+                                            placeholder="Ej. INO850101AAA"
+                                            value={formData.rfc}
+                                            onChange={(e) => handleInputChange("rfc", e.target.value)}
+                                        />
                                     </div>
                                     <div className="flex flex-col gap-2">
                                         <Label htmlFor="curp">CURP (solo persona física)</Label>
-                                        <Input id="curp" placeholder="Ej. MERC890523HNLNRL09" />
+                                        <Input
+                                            id="curp"
+                                            placeholder="Ej. MERC890523HNLNRL09"
+                                            value={formData.curp}
+                                            onChange={(e) => handleInputChange("curp", e.target.value)}
+                                        />
                                     </div>
                                     <div className="flex flex-col gap-2">
-                                        <Label htmlFor="email">Correo Electrónico</Label>
-                                        <Input id="email" type="email" placeholder="correo@ejemplo.com" />
+                                        <Label htmlFor="email">Correo Electrónico *</Label>
+                                        <Input
+                                            id="email"
+                                            type="email"
+                                            placeholder="correo@ejemplo.com"
+                                            value={formData.email}
+                                            onChange={(e) => handleInputChange("email", e.target.value)}
+                                        />
                                     </div>
                                     <div className="flex flex-col gap-2">
-                                        <Label htmlFor="regimen">Régimen Fiscal</Label>
-                                        <Select>
-                                            <SelectTrigger id="regimen">
+                                        <Label htmlFor="regimen_fiscal">Régimen Fiscal *</Label>
+                                        <Select
+                                            value={formData.regimen_fiscal}
+                                            onValueChange={(value) => handleInputChange("regimen_fiscal", value)}
+                                        >
+                                            <SelectTrigger id="regimen_fiscal">
                                                 <SelectValue placeholder="Seleccionar" />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -223,27 +377,52 @@ export function RegistrosClient({ donantes, headerActions }: { donantes: Donante
                                         </Select>
                                     </div>
                                     <div className="flex flex-col gap-2">
-                                        <Label htmlFor="cp">Código Postal</Label>
-                                        <Input id="cp" placeholder="Ej. 06600" maxLength={5} />
+                                        <Label htmlFor="codigo_postal">Código Postal *</Label>
+                                        <Input
+                                            id="codigo_postal"
+                                            placeholder="Ej. 06600"
+                                            maxLength={5}
+                                            value={formData.codigo_postal}
+                                            onChange={(e) => handleInputChange("codigo_postal", e.target.value)}
+                                        />
                                     </div>
                                     <div className="col-span-2 flex flex-col gap-2">
                                         <Label htmlFor="direccion">Dirección</Label>
-                                        <Input id="direccion" placeholder="Calle, número, colonia, ciudad, estado" />
+                                        <Input
+                                            id="direccion"
+                                            placeholder="Calle, número, colonia, ciudad, estado"
+                                            value={formData.direccion}
+                                            onChange={(e) => handleInputChange("direccion", e.target.value)}
+                                        />
                                     </div>
                                     <div className="col-span-2 flex flex-col gap-2">
-                                        <Label htmlFor="actividad">Actividad Económica</Label>
-                                        <Input id="actividad" placeholder="Ej. Comercio al por mayor" />
+                                        <Label htmlFor="actividad_economica">Actividad Económica</Label>
+                                        <Input
+                                            id="actividad_economica"
+                                            placeholder="Ej. Comercio al por mayor"
+                                            value={formData.actividad_economica}
+                                            onChange={(e) => handleInputChange("actividad_economica", e.target.value)}
+                                        />
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2 rounded-md border p-3">
-                                    <input type="checkbox" id="pep" className="size-4" />
-                                    <Label htmlFor="pep" className="font-normal text-sm cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        id="es_pep"
+                                        className="size-4"
+                                        checked={formData.es_pep}
+                                        onChange={(e) => handleInputChange("es_pep", e.target.checked)}
+                                    />
+                                    <Label htmlFor="es_pep" className="font-normal text-sm cursor-pointer">
                                         El donante es una Persona Políticamente Expuesta (PEP)
                                     </Label>
                                 </div>
                                 <div className="flex justify-end gap-2 pt-2">
-                                    <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
-                                    <Button onClick={() => setIsDialogOpen(false)}>Guardar Donante</Button>
+                                    <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isPending}>Cancelar</Button>
+                                    <Button onClick={handleSubmit} disabled={isPending}>
+                                        {isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
+                                        Guardar Donante
+                                    </Button>
                                 </div>
                             </div>
                         </DialogContent>
@@ -333,15 +512,26 @@ export function RegistrosClient({ donantes, headerActions }: { donantes: Donante
                                             {formatMXN(Number(donante.donacion_acumulada))}
                                         </TableCell>
                                         <TableCell className="text-right pr-5">
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="size-7"
-                                                onClick={() => setDetailDonante(donante)}
-                                            >
-                                                <Eye className="size-3.5" />
-                                                <span className="sr-only">Ver detalle</span>
-                                            </Button>
+                                            <div className="flex items-center justify-end gap-1">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="size-7"
+                                                    onClick={() => setDetailDonante(donante)}
+                                                >
+                                                    <Eye className="size-3.5" />
+                                                    <span className="sr-only">Ver detalle</span>
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="size-7"
+                                                    onClick={() => openEdit(donante)}
+                                                >
+                                                    <Edit className="size-3.5" />
+                                                    <span className="sr-only">Editar</span>
+                                                </Button>
+                                            </div>
                                         </TableCell>
                                     </TableRow>
                                 ))}
@@ -369,6 +559,19 @@ export function RegistrosClient({ donantes, headerActions }: { donantes: Donante
                                         <Badge variant="destructive" className="gap-1 text-[10px]">
                                             <ShieldAlert className="size-3" /> PEP
                                         </Badge>
+                                    )}
+                                    {detailDonante.estatus_expediente === "pendiente_subir" && (
+                                        <div className="ml-auto">
+                                            <Button
+                                                size="sm"
+                                                className="h-7 text-xs"
+                                                disabled={isPending}
+                                                onClick={() => handleStatusUpdate(detailDonante.donante_id)}
+                                            >
+                                                {isPending ? <Loader2 className="mr-1 size-3 animate-spin" /> : null}
+                                                Marcar Documentos Subidos
+                                            </Button>
+                                        </div>
                                     )}
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
@@ -420,6 +623,141 @@ export function RegistrosClient({ donantes, headerActions }: { donantes: Donante
                                 </div>
                             </div>
                         )}
+                    </DialogContent>
+                </Dialog>
+
+                {/* Edit Dialog */}
+                <Dialog open={isEditOpen} onOpenChange={(open) => {
+                    setIsEditOpen(open)
+                    if (!open) setDetailDonante(null)
+                }}>
+                    <DialogContent className="sm:max-w-2xl">
+                        <DialogHeader>
+                            <DialogTitle>Editar Donante</DialogTitle>
+                            <DialogDescription>
+                                Modifica los datos del donante — {detailDonante?.nombre_razon_social}
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="flex flex-col gap-4 pt-2">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="col-span-2 flex flex-col gap-2">
+                                    <Label htmlFor="edit-nombre">Nombre Completo / Razón Social *</Label>
+                                    <Input
+                                        id="edit-nombre"
+                                        placeholder="Ej. Inversiones del Norte S.A."
+                                        value={formData.nombre}
+                                        onChange={(e) => handleInputChange("nombre", e.target.value)}
+                                    />
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                    <Label htmlFor="edit-tipo_persona">Tipo de Persona *</Label>
+                                    <Select
+                                        value={formData.tipo_persona}
+                                        onValueChange={(value) => handleInputChange("tipo_persona", value)}
+                                    >
+                                        <SelectTrigger id="edit-tipo_persona">
+                                            <SelectValue placeholder="Seleccionar" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="fisica">Persona Física</SelectItem>
+                                            <SelectItem value="moral">Persona Moral</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                    <Label htmlFor="edit-rfc">RFC *</Label>
+                                    <Input
+                                        id="edit-rfc"
+                                        placeholder="Ej. INO850101AAA"
+                                        value={formData.rfc}
+                                        onChange={(e) => handleInputChange("rfc", e.target.value)}
+                                    />
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                    <Label htmlFor="edit-curp">CURP (solo persona física)</Label>
+                                    <Input
+                                        id="edit-curp"
+                                        placeholder="Ej. MERC890523HNLNRL09"
+                                        value={formData.curp}
+                                        onChange={(e) => handleInputChange("curp", e.target.value)}
+                                    />
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                    <Label htmlFor="edit-email">Correo Electrónico *</Label>
+                                    <Input
+                                        id="edit-email"
+                                        type="email"
+                                        placeholder="correo@ejemplo.com"
+                                        value={formData.email}
+                                        onChange={(e) => handleInputChange("email", e.target.value)}
+                                    />
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                    <Label htmlFor="edit-regimen_fiscal">Régimen Fiscal *</Label>
+                                    <Select
+                                        value={formData.regimen_fiscal}
+                                        onValueChange={(value) => handleInputChange("regimen_fiscal", value)}
+                                    >
+                                        <SelectTrigger id="edit-regimen_fiscal">
+                                            <SelectValue placeholder="Seleccionar" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="601">601 - General de Ley Personas Morales</SelectItem>
+                                            <SelectItem value="605">605 - Sueldos y Salarios</SelectItem>
+                                            <SelectItem value="612">612 - Personas Físicas con Actividades Empresariales</SelectItem>
+                                            <SelectItem value="626">626 - Régimen Simplificado de Confianza</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                    <Label htmlFor="edit-codigo_postal">Código Postal *</Label>
+                                    <Input
+                                        id="edit-codigo_postal"
+                                        placeholder="Ej. 06600"
+                                        maxLength={5}
+                                        value={formData.codigo_postal}
+                                        onChange={(e) => handleInputChange("codigo_postal", e.target.value)}
+                                    />
+                                </div>
+                                <div className="col-span-2 flex flex-col gap-2">
+                                    <Label htmlFor="edit-direccion">Dirección</Label>
+                                    <Input
+                                        id="edit-direccion"
+                                        placeholder="Calle, número, colonia, ciudad, estado"
+                                        value={formData.direccion}
+                                        onChange={(e) => handleInputChange("direccion", e.target.value)}
+                                    />
+                                </div>
+                                <div className="col-span-2 flex flex-col gap-2">
+                                    <Label htmlFor="edit-actividad_economica">Actividad Económica</Label>
+                                    <Input
+                                        id="edit-actividad_economica"
+                                        placeholder="Ej. Comercio al por mayor"
+                                        value={formData.actividad_economica}
+                                        onChange={(e) => handleInputChange("actividad_economica", e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2 rounded-md border p-3">
+                                <input
+                                    type="checkbox"
+                                    id="edit-es_pep"
+                                    className="size-4"
+                                    checked={formData.es_pep}
+                                    onChange={(e) => handleInputChange("es_pep", e.target.checked)}
+                                />
+                                <Label htmlFor="edit-es_pep" className="font-normal text-sm cursor-pointer">
+                                    El donante es una Persona Políticamente Expuesta (PEP)
+                                </Label>
+                            </div>
+                            <div className="flex justify-end gap-2 pt-2">
+                                <Button variant="outline" onClick={() => setIsEditOpen(false)} disabled={isPending}>Cancelar</Button>
+                                <Button onClick={handleEditSubmit} disabled={isPending}>
+                                    {isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
+                                    Actualizar Donante
+                                </Button>
+                            </div>
+                        </div>
                     </DialogContent>
                 </Dialog>
 

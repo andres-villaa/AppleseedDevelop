@@ -31,16 +31,16 @@ const CustomTooltip = ({ active, payload, tot }: any) => {
 
 export function DonorsStatusChart({ donantes }: { donantes: Donante[] }) {
     const total = donantes.length
-    const completo = donantes.filter(d => d.estatus_expediente === "completo").length
-    const en_revision = donantes.filter(d => d.estatus_expediente === "en_revision").length
-    const incompleto = donantes.filter(d => d.estatus_expediente === "incompleto").length
+    const no_necesario = donantes.filter(d => d.estatus_expediente === "no_necesario").length
+    const pendiente_subir = donantes.filter(d => d.estatus_expediente === "pendiente_subir").length
+    const documentos_subidos = donantes.filter(d => d.estatus_expediente === "documentos_subidos").length
     const fisica = donantes.filter(d => d.tipo_persona === "fisica").length
     const moral = donantes.filter(d => d.tipo_persona === "moral").length
 
     const expedienteData = [
-        { name: "Completo", value: completo, color: "var(--color-chart-2)" },
-        { name: "En Revisión", value: en_revision, color: "var(--color-chart-3)" },
-        { name: "Incompleto", value: incompleto, color: "var(--color-chart-4)" },
+        { name: "No necesario", value: no_necesario, color: "var(--color-chart-3)" },
+        { name: "Pendiente de subir", value: pendiente_subir, color: "var(--color-chart-4)" },
+        { name: "Documentos subidos", value: documentos_subidos, color: "var(--color-chart-2)" },
     ]
 
     const tipoData = [
@@ -81,8 +81,8 @@ export function DonorsStatusChart({ donantes }: { donantes: Donante[] }) {
                                 </PieChart>
                             </ResponsiveContainer>
                             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                                <span className="text-2xl font-bold">{completo}</span>
-                                <span className="text-[10px] text-muted-foreground">completos</span>
+                                <span className="text-2xl font-bold">{documentos_subidos}</span>
+                                <span className="text-[10px] text-muted-foreground">subidos</span>
                             </div>
                         </div>
                         <div className="flex flex-col gap-1.5 mt-2">
