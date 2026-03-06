@@ -73,7 +73,7 @@ export function NotificationsPopover({ alertas, count }: NotificationsPopoverPro
                         </Badge>
                     )}
                 </div>
-                <ScrollArea className="max-h-80">
+                <ScrollArea className="h-80">
                     {noAtendidas.length === 0 && (
                         <div className="flex flex-col items-center gap-2 py-8 text-muted-foreground">
                             <CheckCircle className="size-8 text-success opacity-60" />

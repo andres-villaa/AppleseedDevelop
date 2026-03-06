@@ -11,7 +11,7 @@ import {
     ResponsiveContainer,
     Cell,
 } from "recharts"
-import type { Donante } from "@/lib/types"
+import type { Donante, Donacion } from "@/lib/types"
 
 function formatMXN(v: number) {
     if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`
@@ -34,21 +34,38 @@ const CustomTooltip = ({ active, payload, label }: any) => {
         }}>
             <p className="font-semibold mb-1">{label}</p>
             <p>Donación acum.: <span className="font-medium">{new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 0 }).format(d.monto)}</span></p>
+            <p className="text-muted-foreground text-[11px] mt-0.5">{d.numDonaciones} {d.numDonaciones === 1 ? "donación" : "donaciones"}</p>
             {d.es_pep && <p className="text-destructive text-[11px] mt-1">⚠ Persona Políticamente Expuesta</p>}
         </div>
     )
 }
 
-export function TopDonorsChart({ donantes }: { donantes: Donante[] }) {
+type DonacionExtendida = Donacion & { nombre_donante?: string }
+
+export function TopDonorsChart({ donantes, donaciones }: { donantes: Donante[], donaciones: DonacionExtendida[] }) {
+    // Calcular total donado por donante_id a partir de las donaciones reales
+    const totalesPorDonante = new Map<string, number>()
+    const numPorDonante = new Map<string, number>()
+    for (const don of donaciones) {
+        const prev = totalesPorDonante.get(don.donante_id) ?? 0
+        totalesPorDonante.set(don.donante_id, prev + Number(don.monto))
+        numPorDonante.set(don.donante_id, (numPorDonante.get(don.donante_id) ?? 0) + 1)
+    }
+
     const data = [...donantes]
-        .sort((a, b) => Number(b.donacion_acumulada) - Number(a.donacion_acumulada))
-        .slice(0, 6)
-        .map((d, i) => ({
+        .map((d) => ({
             nombre: d.nombre_razon_social.length > 18
                 ? d.nombre_razon_social.slice(0, 18) + "…"
                 : d.nombre_razon_social,
-            monto: Number(d.donacion_acumulada),
+            monto: totalesPorDonante.get(d.donante_id) ?? 0,
+            numDonaciones: numPorDonante.get(d.donante_id) ?? 0,
             es_pep: d.es_pep,
+        }))
+        .filter((d) => d.monto > 0)
+        .sort((a, b) => b.monto - a.monto)
+        .slice(0, 6)
+        .map((d, i) => ({
+            ...d,
             color: i === 0
                 ? "var(--color-chart-1)"
                 : i === 1
@@ -65,45 +82,51 @@ export function TopDonorsChart({ donantes }: { donantes: Donante[] }) {
                 <CardDescription>Los 6 donantes con mayor aportación histórica</CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
-                <div className="h-[260px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <BarChart
-                            data={data}
-                            layout="vertical"
-                            margin={{ left: 8, right: 16, top: 4, bottom: 4 }}
-                            barCategoryGap="25%"
-                        >
-                            <CartesianGrid
-                                strokeDasharray="3 3"
-                                horizontal={false}
-                                stroke="var(--color-border)"
-                            />
-                            <XAxis
-                                type="number"
-                                tickLine={false}
-                                axisLine={false}
-                                fontSize={11}
-                                tickFormatter={formatMXN}
-                                stroke="var(--color-muted-foreground)"
-                            />
-                            <YAxis
-                                type="category"
-                                dataKey="nombre"
-                                tickLine={false}
-                                axisLine={false}
-                                fontSize={11}
-                                width={130}
-                                stroke="var(--color-muted-foreground)"
-                            />
-                            <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(0, 0, 0, 0.05)" }} />
-                            <Bar dataKey="monto" name="Donación acumulada" radius={[0, 4, 4, 0]}>
-                                {data.map((entry, i) => (
-                                    <Cell key={i} fill={entry.color} />
-                                ))}
-                            </Bar>
-                        </BarChart>
-                    </ResponsiveContainer>
-                </div>
+                {data.length === 0 ? (
+                    <div className="flex h-[260px] items-center justify-center text-sm text-muted-foreground">
+                        Sin donaciones registradas
+                    </div>
+                ) : (
+                    <div className="h-[260px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart
+                                data={data}
+                                layout="vertical"
+                                margin={{ left: 8, right: 16, top: 4, bottom: 4 }}
+                                barCategoryGap="25%"
+                            >
+                                <CartesianGrid
+                                    strokeDasharray="3 3"
+                                    horizontal={false}
+                                    stroke="var(--color-border)"
+                                />
+                                <XAxis
+                                    type="number"
+                                    tickLine={false}
+                                    axisLine={false}
+                                    fontSize={11}
+                                    tickFormatter={formatMXN}
+                                    stroke="var(--color-muted-foreground)"
+                                />
+                                <YAxis
+                                    type="category"
+                                    dataKey="nombre"
+                                    tickLine={false}
+                                    axisLine={false}
+                                    fontSize={11}
+                                    width={130}
+                                    stroke="var(--color-muted-foreground)"
+                                />
+                                <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(0, 0, 0, 0.05)" }} />
+                                <Bar dataKey="monto" name="Donación acumulada" radius={[0, 4, 4, 0]}>
+                                    {data.map((entry, i) => (
+                                        <Cell key={i} fill={entry.color} />
+                                    ))}
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                )}
             </CardContent>
         </Card>
     )

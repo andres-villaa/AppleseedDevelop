@@ -44,7 +44,7 @@ import { useRouter } from "next/navigation"
 
 const mainNav = [
   {
-    title: "Panel General",
+    title: "Dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,
   },
@@ -75,7 +75,6 @@ const secondaryNav = [
     title: "Notificaciones",
     href: "/notificaciones",
     icon: Bell,
-    badge: "5",
   },
 ]
 
@@ -86,6 +85,7 @@ export function AppSidebar() {
   const [userName, setUserName] = useState("Cargando...")
   const [userEmail, setUserEmail] = useState("cargando@org.com")
   const [userInitials, setUserInitials] = useState("...")
+  const [alertasPendientes, setAlertasPendientes] = useState(0)
 
   useEffect(() => {
     async function loadUser() {
@@ -113,6 +113,14 @@ export function AppSidebar() {
               )
             }
           }
+
+          // Contar alertas no atendidas
+          const { count } = await supabase
+            .from('Alertas_Cumplimiento')
+            .select('*', { count: 'exact', head: true })
+            .eq('organizacion_id', user.id)
+            .eq('atendida', false)
+          setAlertasPendientes(count ?? 0)
         }
       } catch (error) {
         setUserName("Usuario de Appleseed")
@@ -196,9 +204,9 @@ export function AppSidebar() {
                       <span>{item.title}</span>
                     </Link>
                   </SidebarMenuButton>
-                  {item.badge && (
+                  {alertasPendientes > 0 && (
                     <SidebarMenuBadge className="bg-sidebar-primary text-sidebar-primary-foreground rounded-full text-[10px] px-1.5">
-                      {item.badge}
+                      {alertasPendientes}
                     </SidebarMenuBadge>
                   )}
                 </SidebarMenuItem>

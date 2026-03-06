@@ -19,7 +19,7 @@ export default async function DashboardPage() {
   return (
     <>
       <AppHeader
-        title="Panel General"
+        title="Dashboard"
         description="Resumen de cumplimiento y actividad ALD"
       />
       <div className="flex flex-1 flex-col gap-8 p-4 lg:p-6">
@@ -31,7 +31,7 @@ export default async function DashboardPage() {
           <DonantesKPI donantes={donantes} />
           {/* Gráficas de Donantes */}
           <div className="grid gap-4 lg:grid-cols-3">
-            <TopDonorsChart donantes={donantes} />   {/* col-span-2 */}
+            <TopDonorsChart donantes={donantes} donaciones={donaciones} />   {/* col-span-2 */}
             <DonorsStatusChart donantes={donantes} />
           </div>
         </section>

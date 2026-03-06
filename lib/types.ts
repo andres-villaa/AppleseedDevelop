@@ -24,7 +24,7 @@ export interface Donante {
     email: string
     actividad_economica: string
     es_pep: boolean
-    estatus_expediente: "completo" | "incompleto" | "en_revision"
+    estatus_expediente: "no_necesario" | "pendiente_subir" | "documentos_subidos"
     donacion_acumulada: number
     created_at: string
 }
@@ -84,7 +84,7 @@ export interface AlertaCumplimiento {
     organizacion_id: string
     titulo: string
     mensaje: string
-    tipo_alerta: "donacion_inusual" | "pep" | "expediente_incompleto" | "reporte_pendiente" | "documento_vencido"
+    tipo_alerta: "donacion_inusual" | "pep" | "expediente_incompleto" | "reporte_pendiente" | "documento_vencido" | "umbral_identificacion"
     atendida: boolean
     created_at: string
     // Campo de UI (join con Donantes)

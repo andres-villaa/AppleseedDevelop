@@ -44,7 +44,7 @@ import {
     Edit,
 } from "lucide-react"
 import type { Donante } from "@/lib/types"
-import { addDonante, updateDonanteEstatus, updateDonante } from "@/lib/supabase/actions"
+import { addDonante, marcarDocumentosSubidos, updateDonante } from "@/lib/supabase/actions"
 import { toast } from "sonner"
 
 function formatMXN(amount: number) {
@@ -57,24 +57,28 @@ function formatMXN(amount: number) {
 
 function getEstatusbadge(estatus: Donante["estatus_expediente"]) {
     switch (estatus) {
-        case "completo":
-            return <Badge variant="outline" className="border-success text-success text-[10px]">Completo</Badge>
-        case "en_revision":
-            return <Badge variant="default" className="bg-primary text-primary-foreground text-[10px]">En Revisión</Badge>
-        case "incompleto":
-            return <Badge variant="destructive" className="bg-destructive text-white text-[10px]">Incompleto</Badge>
+        case "no_necesario":
+            return <Badge variant="secondary" className="text-[10px]">No necesario</Badge>
+        case "pendiente_subir":
+            return <Badge variant="destructive" className="text-[10px]">Pendiente de subir</Badge>
+        case "documentos_subidos":
+            return <Badge variant="outline" className="border-success text-success text-[10px]">Documentos subidos</Badge>
+        default:
+            return <Badge variant="secondary" className="text-[10px]">{estatus}</Badge>
     }
 }
 
 // Helper used in dialog
 function getEstatusband(estatus: Donante["estatus_expediente"]) {
     switch (estatus) {
-        case "completo":
-            return <Badge variant="outline" className="border-success text-success text-[10px]">Expediente Completo</Badge>
-        case "en_revision":
-            return <Badge variant="default" className="bg-primary text-primary-foreground text-[10px]">En Revisión</Badge>
-        case "incompleto":
-            return <Badge variant="destructive" className="bg-destructive text-white text-[10px]">Expediente Incompleto</Badge>
+        case "no_necesario":
+            return <Badge variant="secondary" className="text-[10px]">Expediente: No necesario</Badge>
+        case "pendiente_subir":
+            return <Badge variant="destructive" className="text-[10px]">Pendiente de subir documentos</Badge>
+        case "documentos_subidos":
+            return <Badge variant="outline" className="border-success text-success text-[10px]">Documentos subidos</Badge>
+        default:
+            return <Badge variant="secondary" className="text-[10px]">{estatus}</Badge>
     }
 }
 
@@ -123,18 +127,14 @@ export function RegistrosClient({ donantes, headerActions }: { donantes: Donante
         setIsEditOpen(true)
     }
 
-    const handleStatusUpdate = async (newEstatus: "completo" | "incompleto" | "en_revision") => {
-        if (!detailDonante) return
-
+    const handleStatusUpdate = async (donanteId: string) => {
         startTransition(async () => {
-            const result = await updateDonanteEstatus(detailDonante.donante_id, newEstatus)
-
+            const result = await marcarDocumentosSubidos(donanteId)
             if (result.error) {
                 toast.error(`Error al actualizar estatus: ${result.error}`)
             } else {
-                toast.success("Estatus actualizado correctamente")
-                // Se actualiza el detalle local para reflejar el cambio en el Dialog
-                setDetailDonante({ ...detailDonante, estatus_expediente: newEstatus })
+                toast.success("Estatus actualizado: Documentos subidos")
+                setDetailDonante(prev => prev ? { ...prev, estatus_expediente: "documentos_subidos" } : null)
             }
         })
     }
@@ -226,22 +226,22 @@ export function RegistrosClient({ donantes, headerActions }: { donantes: Donante
 
                 {/* Summary cards */}
                 <div className="grid gap-4 sm:grid-cols-3">
-                    <Card className="border-l-4 border-l-success">
+                    <Card className="border-l-4 border-l-muted">
                         <CardContent className="p-4">
-                            <p className="text-xs text-muted-foreground">Expedientes Completos</p>
-                            <p className="text-2xl font-bold mt-1">{donantes.filter(d => d.estatus_expediente === "completo").length}</p>
-                        </CardContent>
-                    </Card>
-                    <Card className="border-l-4 border-l-primary">
-                        <CardContent className="p-4">
-                            <p className="text-xs text-muted-foreground">En Revisión</p>
-                            <p className="text-2xl font-bold mt-1">{donantes.filter(d => d.estatus_expediente === "en_revision").length}</p>
+                            <p className="text-xs text-muted-foreground">No necesario</p>
+                            <p className="text-2xl font-bold mt-1">{donantes.filter(d => d.estatus_expediente === "no_necesario").length}</p>
                         </CardContent>
                     </Card>
                     <Card className="border-l-4 border-l-destructive">
                         <CardContent className="p-4">
-                            <p className="text-xs text-muted-foreground">Expedientes Incompletos</p>
-                            <p className="text-2xl font-bold mt-1">{donantes.filter(d => d.estatus_expediente === "incompleto").length}</p>
+                            <p className="text-xs text-muted-foreground">Pendientes de subir</p>
+                            <p className="text-2xl font-bold mt-1">{donantes.filter(d => d.estatus_expediente === "pendiente_subir").length}</p>
+                        </CardContent>
+                    </Card>
+                    <Card className="border-l-4 border-l-success">
+                        <CardContent className="p-4">
+                            <p className="text-xs text-muted-foreground">Documentos subidos</p>
+                            <p className="text-2xl font-bold mt-1">{donantes.filter(d => d.estatus_expediente === "documentos_subidos").length}</p>
                         </CardContent>
                     </Card>
                 </div>
@@ -249,38 +249,47 @@ export function RegistrosClient({ donantes, headerActions }: { donantes: Donante
                 {/* Toolbar */}
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex flex-1 items-center gap-3 flex-wrap">
-                        <div className="relative flex-1 max-w-sm">
-                            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                            <Input
-                                placeholder="Buscar por nombre, RFC o email..."
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                className="pl-9 h-9"
-                            />
+                        <div className="flex flex-col gap-1 flex-1 max-w-sm">
+                            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide px-0.5">Buscar</span>
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                                <Input
+                                    placeholder="Buscar por nombre, RFC o email..."
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    className="pl-9 h-9"
+                                />
+                            </div>
                         </div>
-                        <Select value={filterEstatus} onValueChange={setFilterEstatus}>
-                            <SelectTrigger className="w-[160px] h-9">
-                                <Filter className="mr-2 size-3.5" />
-                                <SelectValue placeholder="Expediente" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Todos</SelectItem>
-                                <SelectItem value="completo">Completo</SelectItem>
-                                <SelectItem value="en_revision">En Revisión</SelectItem>
-                                <SelectItem value="incompleto">Incompleto</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <Select value={filterTipo} onValueChange={setFilterTipo}>
-                            <SelectTrigger className="w-[160px] h-9">
-                                <Filter className="mr-2 size-3.5" />
-                                <SelectValue placeholder="Tipo" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Todos</SelectItem>
-                                <SelectItem value="fisica">Persona Física</SelectItem>
-                                <SelectItem value="moral">Persona Moral</SelectItem>
-                            </SelectContent>
-                        </Select>
+                        <div className="flex flex-col gap-1">
+                            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide px-0.5">Expediente</span>
+                            <Select value={filterEstatus} onValueChange={setFilterEstatus}>
+                                <SelectTrigger className="w-[180px] h-9">
+                                    <Filter className="mr-2 size-3.5" />
+                                    <SelectValue placeholder="Expediente" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todos</SelectItem>
+                                    <SelectItem value="no_necesario">No necesario</SelectItem>
+                                    <SelectItem value="pendiente_subir">Pendiente de subir</SelectItem>
+                                    <SelectItem value="documentos_subidos">Documentos subidos</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide px-0.5">Tipo</span>
+                            <Select value={filterTipo} onValueChange={setFilterTipo}>
+                                <SelectTrigger className="w-[160px] h-9">
+                                    <Filter className="mr-2 size-3.5" />
+                                    <SelectValue placeholder="Tipo" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todos</SelectItem>
+                                    <SelectItem value="fisica">Persona Física</SelectItem>
+                                    <SelectItem value="moral">Persona Moral</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
                     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                         <DialogTrigger asChild>
@@ -551,23 +560,19 @@ export function RegistrosClient({ donantes, headerActions }: { donantes: Donante
                                             <ShieldAlert className="size-3" /> PEP
                                         </Badge>
                                     )}
-                                    <div className="ml-auto flex items-center gap-2">
-                                        <p className="text-[10px] text-muted-foreground font-medium uppercase">Acciones:</p>
-                                        <Select
-                                            value={detailDonante.estatus_expediente}
-                                            onValueChange={(value) => handleStatusUpdate(value as any)}
-                                            disabled={isPending}
-                                        >
-                                            <SelectTrigger className="h-7 text-[10px] w-[130px]">
-                                                <SelectValue placeholder="Cambiar estatus" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="completo">Marcar Completo</SelectItem>
-                                                <SelectItem value="en_revision">En Revisión</SelectItem>
-                                                <SelectItem value="incompleto">Incompleto</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
+                                    {detailDonante.estatus_expediente === "pendiente_subir" && (
+                                        <div className="ml-auto">
+                                            <Button
+                                                size="sm"
+                                                className="h-7 text-xs"
+                                                disabled={isPending}
+                                                onClick={() => handleStatusUpdate(detailDonante.donante_id)}
+                                            >
+                                                {isPending ? <Loader2 className="mr-1 size-3 animate-spin" /> : null}
+                                                Marcar Documentos Subidos
+                                            </Button>
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
