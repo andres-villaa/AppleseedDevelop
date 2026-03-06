@@ -7,7 +7,7 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const spaceMono = Space_Mono({ weight: ["400", "700"], subsets: ["latin"], variable: "--font-space-mono" });
 
 export const metadata: Metadata = {
-  title: 'CumplAML - Panel de Cumplimiento ALD',
+  title: 'Appleseed - Panel de Cumplimiento ALD',
   description: 'Sistema de gestion y cumplimiento para la prevencion de lavado de dinero. Registro de clientes, documentacion y monitoreo de riesgos.',
   generator: 'v0.app',
   icons: {

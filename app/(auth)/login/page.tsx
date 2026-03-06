@@ -53,8 +53,8 @@ export default function LoginPage() {
                     <div className="flex size-12 items-center justify-center rounded-xl bg-primary shadow-lg shadow-primary/20">
                         <Shield className="size-6 text-primary-foreground" />
                     </div>
-                    <h1 className="text-3xl font-bold tracking-tight text-foreground">CumplAML</h1>
-                    <p className="text-muted-foreground">Sistema de Cumplimiento ALD</p>
+                    <h1 className="text-3xl font-bold tracking-tight text-foreground">Appleseed</h1>
+                    <p className="text-muted-foreground">Prevención de Lavado de Dinero</p>
                 </div>
 
                 <Card className="border-border shadow-xl shadow-black/5 dark:shadow-black/20">
